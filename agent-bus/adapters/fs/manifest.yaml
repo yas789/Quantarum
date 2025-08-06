@@ -1,0 +1,16 @@
+tool_id: fs
+version: 0.1.0
+verbs:
+  - id: fs.mkdir
+    args:
+      path: { type: string, required: true }
+    returns: { type: object, fields: { path: string } }
+  - id: fs.read
+    args:
+      path: { type: string, required: true }
+    returns: { type: object, fields: { content: string } }
+  - id: fs.write
+    args:
+      path: { type: string, required: true }
+      content: { type: string, required: true }
+    returns: { type: object, fields: { bytes: number } }

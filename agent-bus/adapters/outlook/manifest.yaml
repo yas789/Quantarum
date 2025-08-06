@@ -1,0 +1,10 @@
+tool_id: outlook
+version: 0.1.0
+verbs:
+  - id: mail.send
+    args:
+      to:      { type: string, required: true }
+      subject: { type: string, required: true }
+      body:    { type: string, required: true }
+    returns: { type: object, fields: { status: string, messageId: string } }
+    confirm: true
