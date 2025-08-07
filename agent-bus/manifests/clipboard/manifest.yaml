@@ -1,0 +1,54 @@
+# Clipboard adapter
+# Trust Tier: A (Direct API calls with no side effects to external systems)
+tool_id: clipboard
+version: 1.0.0
+trust_tier: "A"
+description: "System clipboard operations"
+verbs:
+  - id: clipboard.get
+    description: Get the current content of the clipboard
+    args:
+      type: object
+      properties: {}
+      additionalProperties: false
+    returns:
+      type: object
+      properties:
+        content:
+          type: string
+          description: The current clipboard content
+        type:
+          type: string
+          enum: ["text", "html", "image", "file", "other"]
+          description: The type of content in the clipboard
+    examples:
+      - name: Get clipboard text
+        call: {}
+        expect: { content: "Copied text", type: "text" }
+
+  - id: clipboard.set
+    description: Set the content of the clipboard
+    confirm: true
+    args:
+      type: object
+      required: [content]
+      properties:
+        content:
+          type: string
+          description: The content to set to the clipboard
+        type:
+          type: string
+          enum: ["text", "html"]
+          default: "text"
+          description: The type of content
+      additionalProperties: false
+    returns:
+      type: object
+      properties:
+        success:
+          type: boolean
+          description: Whether the operation was successful
+    examples:
+      - name: Set clipboard text
+        call: { content: "Text to copy", type: "text" }
+        expect: { success: true }

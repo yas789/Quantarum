@@ -1,0 +1,78 @@
+# Web Search adapter
+# Trust Tier: B (Uses browser automation to perform searches)
+tool_id: web.search
+version: 1.0.0
+trust_tier: "B"
+description: "Web search functionality via search engines"
+verbs:
+  - id: web.search
+    description: Perform a web search and return results
+    args:
+      type: object
+      required: [query]
+      properties:
+        query:
+          type: string
+          description: Search query
+        engine:
+          type: string
+          enum: ["google", "bing", "duckduckgo"]
+          default: "google"
+          description: Search engine to use
+        limit:
+          type: integer
+          minimum: 1
+          maximum: 20
+          default: 5
+          description: Maximum number of results to return
+        region:
+          type: string
+          description: Region/language for results (e.g., 'us', 'uk', 'fr')
+        safeSearch:
+          type: boolean
+          default: true
+          description: Whether to enable safe search filtering
+      additionalProperties: false
+    returns:
+      type: object
+      properties:
+        query:
+          type: string
+          description: The search query that was used
+        results:
+          type: array
+          items:
+            type: object
+            properties:
+              title:
+                type: string
+                description: Result title
+              url:
+                type: string
+                format: uri
+                description: Result URL
+              snippet:
+                type: string
+                description: Short description/snippet
+              source:
+                type: string
+                description: Source domain
+              date:
+                type: string
+                format: date
+                description: Published date if available
+        searchUrl:
+          type: string
+          format: uri
+          description: URL of the search results page
+    examples:
+      - name: Search for information
+        call: { query: "latest AI research papers", limit: 3 }
+        expect:
+          query: "latest AI research papers"
+          results:
+            - title: "Recent Advances in AI - Stanford University"
+              url: "https://stanford.edu/ai/research"
+              snippet: "Explore the latest research in artificial intelligence from Stanford's leading researchers..."
+              source: "stanford.edu"
+          searchUrl: "https://www.google.com/search?q=latest+AI+research+papers"

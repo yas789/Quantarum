@@ -1,22 +1,41 @@
-const express = require("express");
-const { spawn } = require("child_process");
-const fs = require("fs");
-const path = require("path");
-const YAML = require("yaml");
-const { getToken, initiateDeviceCodeLogin } = require("./auth");
+#!/usr/bin/env node
 
-const app = express();
-app.use(express.json());
+// Entry point for the agent-bus server
 
-// In-memory store for device code responses
-const pendingAuths = new Map();
+const broker = require('./app');
+const config = require('./config');
+const { logger } = require('./logger');
 
-// load manifests at startup
-const manifests = {};
-for (const tool of ["fs", "outlook", "mail-local"]) {
-  const p = path.join(__dirname, "..", "adapters", tool, "manifest.yaml");
-  manifests[tool] = YAML.parse(fs.readFileSync(p, "utf8"));
+// Handle process termination
+async function shutdown() {
+  logger.info('Shutting down...');
+  
+  try {
+    await broker.stop();
+    process.exit(0);
+  } catch (error) {
+    logger.error('Error during shutdown', { error: error.message });
+    process.exit(1);
+  }
 }
+
+// Handle signals
+process.on('SIGTERM', shutdown);
+process.on('SIGINT', shutdown);
+process.on('unhandledRejection', (reason, promise) => {
+  logger.error('Unhandled Rejection at:', { promise, reason });
+});
+
+// Start the server
+(async () => {
+  try {
+    await broker.start(config.PORT);
+    logger.info('Agent Bus is ready');
+  } catch (error) {
+    logger.error('Failed to start Agent Bus', { error: error.message });
+    process.exit(1);
+  }
+})();
 
 // 1) Capabilities: agents discover tools here
 app.get("/capabilities", (_req, res) => {

@@ -1,0 +1,189 @@
+# Web automation adapter
+# Trust Tier: B (Uses browser automation)
+tool_id: web
+version: 1.0.0
+trust_tier: "B"
+description: "Web browser automation"
+verbs:
+  - id: web.open
+    description: Open a URL in the browser
+    args:
+      type: object
+      required: [url]
+      properties:
+        url:
+          type: string
+          format: uri
+          description: URL to open
+        headless:
+          type: boolean
+          default: false
+          description: Whether to run in headless mode (no visible browser)
+        waitUntil:
+          type: string
+          enum: ["load", "domcontentloaded", "networkidle0", "networkidle2"]
+          default: "load"
+          description: When to consider navigation succeeded
+      additionalProperties: false
+    returns:
+      type: object
+      properties:
+        title:
+          type: string
+          description: Page title
+        url:
+          type: string
+          format: uri
+          description: Final URL after redirects
+    examples:
+      - name: Open a website
+        call: { url: "https://example.com" }
+        expect: { title: "Example Domain", url: "https://example.com/" }
+
+  - id: web.click
+    description: Click an element on the page
+    args:
+      type: object
+      required: [selector]
+      properties:
+        selector:
+          type: string
+          description: CSS selector for the element to click
+        waitForNavigation:
+          type: boolean
+          default: false
+          description: Whether to wait for navigation after clicking
+        timeout:
+          type: integer
+          minimum: 1000
+          default: 30000
+          description: Maximum time to wait in milliseconds
+      additionalProperties: false
+    returns:
+      type: object
+      properties:
+        success:
+          type: boolean
+          description: Whether the click was successful
+    examples:
+      - name: Click a button
+        call: { selector: "button.primary", waitForNavigation: true }
+        expect: { success: true }
+
+  - id: web.fill
+    description: Fill a form field
+    args:
+      type: object
+      required: [selector, value]
+      properties:
+        selector:
+          type: string
+          description: CSS selector for the input field
+        value:
+          type: string
+          description: Value to fill
+        submit:
+          type: boolean
+          default: false
+          description: Whether to submit the form after filling
+      additionalProperties: false
+    returns:
+      type: object
+      properties:
+        success:
+          type: boolean
+          description: Whether the field was filled successfully
+    examples:
+      - name: Fill a search box
+        call: { selector: "input[name='q']", value: "search query", submit: true }
+        expect: { success: true }
+
+  - id: web.read
+    description: Read content from the page
+    args:
+      type: object
+      required: [selector]
+      properties:
+        selector:
+          type: string
+          description: CSS selector for the element to read
+        attribute:
+          type: string
+          description: Attribute to read (e.g., 'href', 'value')
+        as:
+          type: string
+          enum: ["text", "html", "value"]
+          default: "text"
+          description: What to return
+      additionalProperties: false
+    returns:
+      type: object
+      properties:
+        value:
+          type: string
+          description: The requested value
+    examples:
+      - name: Read page heading
+        call: { selector: "h1", as: "text" }
+        expect: { value: "Welcome to the Website" }
+
+  - id: web.wait
+    description: Wait for an element or condition
+    args:
+      type: object
+      oneOf:
+        - required: [selector]
+          properties:
+            selector:
+              type: string
+              description: CSS selector to wait for
+            visible:
+              type: boolean
+              default: true
+              description: Whether to wait for the element to be visible
+            hidden:
+              type: boolean
+              default: false
+              description: Whether to wait for the element to be hidden
+        - required: [timeout]
+          properties:
+            timeout:
+              type: integer
+              minimum: 100
+              description: Time to wait in milliseconds
+      additionalProperties: false
+    returns:
+      type: object
+      properties:
+        success:
+          type: boolean
+          description: Whether the wait condition was met
+    examples:
+      - name: Wait for an element
+        call: { selector: ".results", timeout: 5000 }
+        expect: { success: true }
+
+  - id: web.upload
+    description: Upload a file to an input element
+    confirm: true
+    args:
+      type: object
+      required: [selector, filePath]
+      properties:
+        selector:
+          type: string
+          description: CSS selector for the file input element
+        filePath:
+          type: string
+          description: Path to the file to upload
+      additionalProperties: false
+    returns:
+      type: object
+      properties:
+        success:
+          type: boolean
+          description: Whether the file was uploaded successfully
+    examples:
+      - name: Upload a file
+        call: { selector: "input[type=file]", filePath: "/path/to/file.pdf" }
+        expect: { success: true }

@@ -1,0 +1,176 @@
+# Filesystem adapter
+# Trust Tier: A (Direct API calls with no side effects to external systems)
+tool_id: fs
+version: 1.0.0
+trust_tier: "A"
+description: "Local filesystem operations"
+verbs:
+  - id: fs.read
+    description: Read the contents of a file
+    args:
+      type: object
+      required: [path]
+      properties:
+        path:
+          type: string
+          description: Path to the file to read
+      additionalProperties: false
+    returns:
+      type: object
+      properties:
+        content:
+          type: string
+          description: The file contents
+    examples:
+      - name: Read a text file
+        call: { path: "/path/to/file.txt" }
+        expect: { content: "File contents here" }
+
+  - id: fs.write
+    description: Write content to a file, creating it if it doesn't exist
+    confirm: true
+    args:
+      type: object
+      required: [path, content]
+      properties:
+        path:
+          type: string
+          description: Path to the file to write to
+        content:
+          type: string
+          description: Content to write to the file
+        encoding:
+          type: string
+          enum: ["utf8", "base64", "hex"]
+          default: "utf8"
+          description: Encoding to use when writing the file
+      additionalProperties: false
+    returns:
+      type: object
+      properties:
+        path:
+          type: string
+          description: Path to the written file
+        bytesWritten:
+          type: integer
+          description: Number of bytes written
+    examples:
+      - name: Write a text file
+        call: { path: "/path/to/file.txt", content: "Hello, world!" }
+        expect: { path: "/path/to/file.txt", bytesWritten: 13 }
+
+  - id: fs.mkdir
+    description: Create a directory and any necessary parent directories
+    args:
+      type: object
+      required: [path]
+      properties:
+        path:
+          type: string
+          description: Path of the directory to create
+        mode:
+          type: string
+          pattern: '^[0-7]{3,4}$'
+          description: Permissions in octal (e.g., '0755')
+      additionalProperties: false
+    returns:
+      type: object
+      properties:
+        path:
+          type: string
+          description: Path to the created directory
+    examples:
+      - name: Create a directory
+        call: { path: "/path/to/directory" }
+        expect: { path: "/path/to/directory" }
+
+  - id: fs.move
+    description: Move or rename a file or directory
+    confirm: true
+    args:
+      type: object
+      required: [source, destination]
+      properties:
+        source:
+          type: string
+          description: Path to the file or directory to move
+        destination:
+          type: string
+          description: New path for the file or directory
+      additionalProperties: false
+    returns:
+      type: object
+      properties:
+        source:
+          type: string
+          description: Original path
+        destination:
+          type: string
+          description: New path
+    examples:
+      - name: Rename a file
+        call: { source: "/path/to/old.txt", destination: "/path/to/new.txt" }
+        expect: { source: "/path/to/old.txt", destination: "/path/to/new.txt" }
+
+  - id: fs.search
+    description: Search for files matching a pattern
+    args:
+      type: object
+      required: [dir, pattern]
+      properties:
+        dir:
+          type: string
+          description: Directory to search within
+        pattern:
+          type: string
+          description: Glob pattern to match files against (e.g., '*.txt')
+        limit:
+          type: integer
+          minimum: 1
+          maximum: 1000
+          default: 100
+          description: Maximum number of results to return
+        sort:
+          type: string
+          enum: ["name", "mtime", "size"]
+          default: "name"
+          description: Sort order for results
+        recursive:
+          type: boolean
+          default: true
+          description: Whether to search subdirectories
+      additionalProperties: false
+    returns:
+      type: object
+      properties:
+        results:
+          type: array
+          items:
+            type: object
+            properties:
+              path:
+                type: string
+                description: Full path to the file
+              name:
+                type: string
+                description: File name
+              size:
+                type: integer
+                description: File size in bytes
+              mtime:
+                type: string
+                format: date-time
+                description: Last modified timestamp
+              isDirectory:
+                type: boolean
+                description: Whether this is a directory
+    examples:
+      - name: Find all PDFs in a directory
+        call: { dir: "/path/to/search", pattern: "*.pdf", limit: 10 }
+        expect:
+          results:
+            - path: "/path/to/search/document.pdf"
+              name: "document.pdf"
+              size: 12345
+              mtime: "2023-01-01T12:00:00.000Z"
+              isDirectory: false

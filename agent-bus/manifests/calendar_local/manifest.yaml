@@ -1,0 +1,73 @@
+# Local Calendar adapter
+# Trust Tier: C (Uses AppleScript to interact with Calendar.app)
+tool_id: calendar_local
+version: 1.0.0
+trust_tier: "C"
+description: "Local calendar operations using Calendar.app"
+verbs:
+  - id: calendar_local.create
+    description: Create a new calendar event
+    confirm: true
+    args:
+      type: object
+      required: [title, start]
+      properties:
+        title:
+          type: string
+          description: Title of the event
+        start:
+          type: string
+          format: date-time
+          description: Start time of the event (ISO 8601 format)
+        end:
+          type: string
+          format: date-time
+          description: End time of the event (ISO 8601 format). If not provided, defaults to 1 hour after start.
+        allDay:
+          type: boolean
+          default: false
+          description: Whether this is an all-day event
+        location:
+          type: string
+          description: Location of the event
+        notes:
+          type: string
+          description: Additional notes for the event
+        attendees:
+          type: array
+          items:
+            type: string
+            format: email
+          description: Email addresses of attendees
+        calendar:
+          type: string
+          default: "Home"
+          description: Calendar to add the event to
+      additionalProperties: false
+    returns:
+      type: object
+      properties:
+        eventId:
+          type: string
+          description: Unique identifier for the created event
+        start:
+          type: string
+          format: date-time
+          description: Start time of the created event
+        end:
+          type: string
+          format: date-time
+          description: End time of the created event
+    examples:
+      - name: Create a meeting
+        call:
+          title: "Team Sync"
+          start: "2023-06-01T14:00:00+01:00"
+          end: "2023-06-01T15:00:00+01:00"
+          location: "Meeting Room 1"
+          notes: "Weekly team sync meeting"
+          attendees: ["team@example.com"]
+        expect:
+          eventId: "event123"
+          start: "2023-06-01T14:00:00+01:00"
+          end: "2023-06-01T15:00:00+01:00"

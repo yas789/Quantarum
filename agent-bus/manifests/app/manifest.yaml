@@ -1,0 +1,60 @@
+# Application control adapter
+# Trust Tier: C (Uses AppleScript/Accessibility for app control)
+tool_id: app
+version: 1.0.0
+trust_tier: "C"
+description: "Application launch and control"
+verbs:
+  - id: app.open
+    description: Open an application
+    args:
+      type: object
+      required: [name]
+      properties:
+        name:
+          type: string
+          description: Name of the application to open (e.g., "Safari", "Visual Studio Code")
+        args:
+          type: array
+          items:
+            type: string
+          description: Command line arguments to pass to the application
+        wait:
+          type: boolean
+          default: false
+          description: Whether to wait for the app to launch before returning
+      additionalProperties: false
+    returns:
+      type: object
+      properties:
+        pid:
+          type: integer
+          description: Process ID of the launched application
+        name:
+          type: string
+          description: Name of the application
+    examples:
+      - name: Open Safari
+        call: { name: "Safari" }
+        expect: { pid: 12345, name: "Safari" }
+
+  - id: app.focus
+    description: Bring an application to the foreground
+    args:
+      type: object
+      required: [name]
+      properties:
+        name:
+          type: string
+          description: Name of the application to focus
+      additionalProperties: false
+    returns:
+      type: object
+      properties:
+        success:
+          type: boolean
+          description: Whether the operation was successful
+    examples:
+      - name: Focus on Terminal
+        call: { name: "Terminal" }
+        expect: { success: true }
