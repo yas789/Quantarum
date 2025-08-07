@@ -1,0 +1,142 @@
+# Web Search Adapter Manifest
+# This adapter provides web search capabilities using various search engines
+
+tool_id: web.search
+version: 1.0.0
+description: >
+  Provides web search functionality using popular search engines like Google, Bing, and DuckDuckGo.
+  Supports searching the web and getting search suggestions.
+
+trust_tier: B  # Web-based service
+
+verbs:
+  - id: web.search
+    description: Perform a web search
+    args_schema:
+      type: object
+      required: [query]
+      properties:
+        query:
+          type: string
+          description: The search query
+        options:
+          type: object
+          properties:
+            engine:
+              type: string
+              enum: [google, bing, duckduckgo]
+              default: google
+              description: The search engine to use
+            page:
+              type: integer
+              minimum: 1
+              default: 1
+              description: The page number of results to return (pagination)
+            limit:
+              type: integer
+              minimum: 1
+              maximum: 100
+              default: 10
+              description: Maximum number of results to return per page
+            region:
+              type: string
+              default: us
+              description: Region/language code for localized results (e.g., 'us', 'uk', 'fr')
+            safe_search:
+              type: string
+              enum: [moderate, off]
+              default: moderate
+              description: Safe search filter level
+            timeout:
+              type: integer
+              minimum: 1000
+              maximum: 30000
+              default: 10000
+              description: Maximum time to wait for search results in milliseconds
+    returns_schema:
+      type: object
+      properties:
+        query:
+          type: string
+          description: The original search query
+        engine:
+          type: string
+          description: The search engine used
+        page:
+          type: integer
+          description: The current page of results
+        results:
+          type: array
+          items:
+            type: object
+            properties:
+              title:
+                type: string
+                description: The title of the search result
+              link:
+                type: string
+                format: uri
+                description: The URL of the search result
+              snippet:
+                type: string
+                description: A short snippet/description of the result
+        total_results:
+          type: integer
+          description: Total number of results on the current page
+        has_more:
+          type: boolean
+          description: Whether there are more results available
+    confirm: false
+    examples:
+      - args: {query: "quantum computing"}
+        description: Basic search for "quantum computing"
+      - args: {query: "latest news", options: {engine: "bing", limit: 5, region: "uk"}}
+        description: Search with custom options
+
+  - id: web.suggest
+    description: Get search suggestions for a query
+    args_schema:
+      type: object
+      required: [query]
+      properties:
+        query:
+          type: string
+          description: The search query to get suggestions for
+        options:
+          type: object
+          properties:
+            engine:
+              type: string
+              enum: [google, bing, duckduckgo]
+              default: google
+              description: The search engine to use for suggestions
+            limit:
+              type: integer
+              minimum: 1
+              maximum: 20
+              default: 5
+              description: Maximum number of suggestions to return
+            region:
+              type: string
+              default: us
+              description: Region/language code for localized suggestions
+    returns_schema:
+      type: object
+      properties:
+        query:
+          type: string
+          description: The original query
+        engine:
+          type: string
+          description: The search engine used
+        suggestions:
+          type: array
+          items:
+            type: string
+          description: List of search suggestions
+    confirm: false
+    examples:
+      - args: {query: "how to"}
+        description: Get search suggestions for "how to"
+      - args: {query: "best", options: {engine: "bing", limit: 3}}
+        description: Get 3 suggestions from Bing for "best"

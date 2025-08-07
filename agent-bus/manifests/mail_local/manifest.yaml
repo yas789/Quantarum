@@ -1,0 +1,137 @@
+# Local Mail adapter
+# Trust Tier: C (Uses AppleScript to interact with Mail.app)
+tool_id: mail_local
+version: 1.0.0
+trust_tier: "C"
+description: "Local email operations using Mail.app"
+verbs:
+  - id: mail_local.send
+    description: Send an email using Mail.app
+    confirm: true
+    args:
+      type: object
+      required: [to, subject, body]
+      properties:
+        to:
+          type: array
+          items:
+            type: string
+            format: email
+          minItems: 1
+          description: Recipient email addresses
+        cc:
+          type: array
+          items:
+            type: string
+            format: email
+          description: CC email addresses
+        bcc:
+          type: array
+          items:
+            type: string
+            format: email
+          description: BCC email addresses
+        subject:
+          type: string
+          description: Email subject
+        body:
+          type: string
+          description: Email body (plain text or HTML)
+        isHtml:
+          type: boolean
+          default: false
+          description: Whether the body is HTML
+        attachments:
+          type: array
+          items:
+            type: string
+          description: Paths to files to attach
+      additionalProperties: false
+    returns:
+      type: object
+      properties:
+        success:
+          type: boolean
+          description: Whether the email was sent successfully
+    examples:
+      - name: Send a simple email
+        call:
+          to: ["recipient@example.com"]
+          subject: "Hello from Agent Bus"
+          body: "This is a test email sent via Mail.app"
+        expect: { success: true }
+
+  - id: mail_local.search
+    description: Search emails in Mail.app
+    args:
+      type: object
+      properties:
+        query:
+          type: string
+          description: Search query (supports Mail.app search syntax)
+        mailbox:
+          type: string
+          default: "INBOX"
+          description: Mailbox to search in
+        limit:
+          type: integer
+          minimum: 1
+          maximum: 100
+          default: 10
+          description: Maximum number of results to return
+        unreadOnly:
+          type: boolean
+          default: false
+          description: Whether to only return unread messages
+        afterDate:
+          type: string
+          format: date-time
+          description: Only return messages after this date
+        beforeDate:
+          type: string
+          format: date-time
+          description: Only return messages before this date
+      additionalProperties: false
+    returns:
+      type: object
+      properties:
+        messages:
+          type: array
+          items:
+            type: object
+            properties:
+              id:
+                type: string
+                description: Unique message ID
+              from:
+                type: string
+                description: Sender's email address
+              to:
+                type: array
+                items: { type: string }
+                description: Recipient email addresses
+              subject:
+                type: string
+                description: Email subject
+              date:
+                type: string
+                format: date-time
+                description: When the email was received
+              unread:
+                type: boolean
+                description: Whether the email is unread
+              snippet:
+                type: string
+                description: Preview of the email content
+    examples:
+      - name: Search for unread emails
+        call: { unreadOnly: true, limit: 5 }
+        expect:
+          messages:
+            - id: "msg123"
+              from: "sender@example.com"
+              to: ["me@example.com"]
+              subject: "Important Update"
+              date: "2023-05-01T10:30:00Z"
+              unread: true
+              snippet: "Here's the information you requested..."

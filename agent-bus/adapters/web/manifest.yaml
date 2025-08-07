@@ -1,0 +1,423 @@
+# Web Automation Adapter Manifest
+# This adapter provides web automation capabilities through a browser extension
+
+tool_id: web
+version: 1.0.0
+description: >
+  Provides web automation capabilities including navigation, form filling, and data extraction
+  through a secure browser extension and native messaging host.
+
+trust_tier: B  # Web DOM automation
+
+verbs:
+  - id: web.navigate
+    description: Navigate to a URL
+    args_schema:
+      type: object
+      required: [url]
+      properties:
+        url:
+          type: string
+          format: uri
+          description: The URL to navigate to
+        wait_until:
+          type: string
+          enum: [load, domcontentloaded, networkidle0, networkidle2]
+          default: load
+          description: When to consider navigation succeeded
+        timeout:
+          type: integer
+          minimum: 0
+          default: 30000
+          description: Maximum navigation time in milliseconds
+    returns_schema:
+      type: object
+      properties:
+        url:
+          type: string
+          format: uri
+          description: The final URL after navigation
+        title:
+          type: string
+          description: The page title
+        status:
+          type: integer
+          description: HTTP status code
+    confirm: false
+    examples:
+      - args: {url: "https://example.com"}
+        description: Navigate to example.com
+      - args: {url: "https://example.com", wait_until: "networkidle0", timeout: 60000}
+        description: Navigate and wait for network to be idle
+
+  - id: web.click
+    description: Click an element on the page
+    args_schema:
+      type: object
+      required: [selector]
+      properties:
+        selector:
+          type: string
+          description: CSS selector for the element to click
+        button:
+          type: string
+          enum: [left, right, middle]
+          default: left
+          description: Mouse button to use
+        click_count:
+          type: integer
+          minimum: 1
+          default: 1
+          description: Number of clicks
+        delay:
+          type: integer
+          minimum: 0
+          default: 0
+          description: Time to wait between mousedown and mouseup in milliseconds
+        wait_for_navigation:
+          type: boolean
+          default: false
+          description: Whether to wait for navigation after clicking
+        timeout:
+          type: integer
+          minimum: 0
+          default: 30000
+          description: Maximum time to wait for the element in milliseconds
+    returns_schema:
+      type: object
+      properties:
+        selector:
+          type: string
+          description: The selector that was clicked
+        clicked:
+          type: boolean
+          description: Whether the click was successful
+    confirm: true
+    examples:
+      - args: {selector: "button.submit"}
+        description: Click a submit button
+      - args: {selector: "a[href*='download']", button: "left", wait_for_navigation: true}
+        description: Click a download link and wait for navigation
+
+  - id: web.fill
+    description: Fill out a form
+    args_schema:
+      type: object
+      required: [fields]
+      properties:
+        fields:
+          type: object
+          additionalProperties:
+            type: object
+            required: [selector, value]
+            properties:
+              selector:
+                type: string
+                description: CSS selector for the form field
+              value:
+                type: [string, number, boolean]
+                description: Value to fill in the field
+              type:
+                type: string
+                description: Type of the field (text, email, password, etc.)
+        submit:
+          type: boolean
+          default: false
+          description: Whether to submit the form after filling
+        wait_for_navigation:
+          type: boolean
+          default: false
+          description: Whether to wait for navigation after submission
+        timeout:
+          type: integer
+          minimum: 0
+          default: 30000
+          description: Maximum time to wait for the elements in milliseconds
+    returns_schema:
+      type: object
+      properties:
+        filled:
+          type: integer
+          description: Number of fields successfully filled
+        submitted:
+          type: boolean
+          description: Whether the form was submitted
+    confirm: true
+    examples:
+      - args:
+          fields:
+            username: {selector: "#username", value: "testuser"}
+            password: {selector: "#password", value: "s3cr3t", type: "password"}
+          submit: true
+          wait_for_navigation: true
+        description: Fill and submit a login form
+
+  - id: web.extract
+    description: Extract data from the page
+    args_schema:
+      type: object
+      required: [selectors]
+      properties:
+        selectors:
+          type: object
+          additionalProperties:
+            type: object
+            properties:
+              selector:
+                type: string
+                description: CSS selector for the element to extract
+              attribute:
+                type: string
+                description: Attribute to extract (defaults to text content)
+              type:
+                type: string
+                enum: [text, html, value, attribute, exists, count]
+                default: text
+                description: Type of data to extract
+              array:
+                type: boolean
+                default: false
+                description: Whether to extract multiple elements
+        wait_for:
+          type: string
+          description: CSS selector to wait for before extracting
+        timeout:
+          type: integer
+          minimum: 0
+          default: 30000
+          description: Maximum time to wait for the elements in milliseconds
+    returns_schema:
+      type: object
+      additionalProperties:
+        type: [string, number, boolean, array, object, null]
+      description: Extracted data keyed by the selector names
+    confirm: false
+    examples:
+      - args:
+          selectors:
+            title: {selector: "h1", type: "text"}
+            links: {selector: "a", type: "attribute", attribute: "href", array: true}
+        description: Extract the page title and all links
+
+  - id: web.screenshot
+    description: Take a screenshot of the page or an element
+    args_schema:
+      type: object
+      properties:
+        selector:
+          type: string
+          description: CSS selector for the element to capture (defaults to full page)
+        format:
+          type: string
+          enum: [png, jpeg, webp]
+          default: png
+          description: Image format
+        quality:
+          type: integer
+          minimum: 0
+          maximum: 100
+          default: 80
+          description: Image quality (0-100)
+        full_page:
+          type: boolean
+          default: false
+          description: Whether to capture the full page (may be slow for long pages)
+    returns_schema:
+      type: object
+      properties:
+        data_url:
+          type: string
+          format: data-url
+          description: The screenshot as a data URL
+        width:
+          type: integer
+          description: Width of the screenshot in pixels
+        height:
+          type: integer
+          description: Height of the screenshot in pixels
+    confirm: false
+    examples:
+      - args: {full_page: true}
+        description: Take a full-page screenshot
+      - args: {selector: ".product-image", format: "jpeg", quality: 90}
+        description: Take a JPEG screenshot of a product image
+
+  - id: web.evaluate
+    description: Execute JavaScript in the page context
+    args_schema:
+      type: object
+      required: [script]
+      properties:
+        script:
+          type: string
+          description: JavaScript code to execute
+        args:
+          type: array
+          items: {}
+          default: []
+          description: Arguments to pass to the script
+        return_by_value:
+          type: boolean
+          default: true
+          description: Whether to return the result as a JSON-serializable value
+        await_promise:
+          type: boolean
+          default: true
+          description: Whether to await the result if it's a Promise
+        timeout:
+          type: integer
+          minimum: 0
+          default: 30000
+          description: Maximum execution time in milliseconds
+    returns_schema:
+      type: object
+      properties:
+        result:
+          description: The result of the script execution
+        type:
+          type: string
+          description: The type of the result
+    confirm: true
+    examples:
+      - args: {script: "return document.title"}
+        description: Get the page title
+      - args: {script: "return {url: window.location.href, title: document.title}"}
+        description: Return an object with URL and title
+
+  - id: web.wait
+    description: Wait for a condition to be met
+    args_schema:
+      oneOf:
+        - type: object
+          required: [selector]
+          properties:
+            selector:
+              type: string
+              description: CSS selector to wait for
+            visible:
+              type: boolean
+              default: true
+              description: Whether to wait for the element to be visible
+            hidden:
+              type: boolean
+              default: false
+              description: Whether to wait for the element to be hidden
+            timeout:
+              type: integer
+              minimum: 0
+              default: 30000
+              description: Maximum time to wait in milliseconds
+        - type: object
+          required: [function]
+          properties:
+            function:
+              type: string
+              description: JavaScript function that returns a truthy value when the condition is met
+            args:
+              type: array
+              items: {}
+              default: []
+              description: Arguments to pass to the function
+            polling:
+              type: integer
+              minimum: 100
+              default: 500
+              description: How often to check the condition in milliseconds
+            timeout:
+              type: integer
+              minimum: 0
+              default: 30000
+              description: Maximum time to wait in milliseconds
+    returns_schema:
+      type: object
+      properties:
+        success:
+          type: boolean
+          description: Whether the condition was met
+        elapsed:
+          type: number
+          description: Time taken in milliseconds
+    confirm: false
+    examples:
+      - args: {selector: ".search-results", visible: true, timeout: 10000}
+        description: Wait for search results to appear
+      - args: {function: "return window.pageIsReady === true"}
+        description: Wait for a custom page ready state
+
+  - id: web.download
+    description: Download a file from a URL
+    args_schema:
+      type: object
+      required: [url, save_path]
+      properties:
+        url:
+          type: string
+          format: uri
+          description: URL of the file to download
+        save_path:
+          type: string
+          description: Path to save the file to (relative to the downloads directory)
+        wait_for_download:
+          type: boolean
+          default: true
+          description: Whether to wait for the download to complete
+        timeout:
+          type: integer
+          minimum: 0
+          default: 300000
+          description: Maximum time to wait for the download in milliseconds
+    returns_schema:
+      type: object
+      properties:
+        path:
+          type: string
+          description: Path to the downloaded file
+        size:
+          type: integer
+          description: Size of the downloaded file in bytes
+        url:
+          type: string
+          format: uri
+          description: URL the file was downloaded from
+    confirm: true
+    examples:
+      - args: {url: "https://example.com/file.pdf", save_path: "documents/report.pdf"}
+        description: Download a PDF file
+
+  - id: web.upload
+    description: Upload a file to a file input
+    args_schema:
+      type: object
+      required: [selector, file_path]
+      properties:
+        selector:
+          type: string
+          description: CSS selector for the file input element
+        file_path:
+          type: string
+          description: Path to the file to upload (absolute or relative to the working directory)
+        wait_for_upload:
+          type: boolean
+          default: true
+          description: Whether to wait for the upload to complete
+        timeout:
+          type: integer
+          minimum: 0
+          default: 300000
+          description: Maximum time to wait for the upload in milliseconds
+    returns_schema:
+      type: object
+      properties:
+        success:
+          type: boolean
+          description: Whether the upload was successful
+        file_name:
+          type: string
+          description: Name of the uploaded file
+        file_size:
+          type: integer
+          description: Size of the uploaded file in bytes
+    confirm: true
+    examples:
+      - args: {selector: "input[type=file]", file_path: "/path/to/file.jpg"}
+        description: Upload a file to a file input
