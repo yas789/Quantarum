@@ -3,13 +3,17 @@ const { spawn } = require("child_process");
 const fs = require("fs");
 const path = require("path");
 const YAML = require("yaml");
+const { getToken, initiateDeviceCodeLogin } = require("./auth");
 
 const app = express();
 app.use(express.json());
 
+// In-memory store for device code responses
+const pendingAuths = new Map();
+
 // load manifests at startup
 const manifests = {};
-for (const tool of ["fs","outlook"]) {
+for (const tool of ["fs", "outlook", "mail-local"]) {
   const p = path.join(__dirname, "..", "adapters", tool, "manifest.yaml");
   manifests[tool] = YAML.parse(fs.readFileSync(p, "utf8"));
 }
@@ -26,13 +30,55 @@ app.get("/capabilities", (_req, res) => {
   });
 });
 
-// 2) Invoke: run one verb
-app.post("/invoke", (req, res) => {
+// 2) Auth endpoints
+app.get("/auth/outlook/device", async (req, res) => {
+  try {
+    const authResponse = await initiateDeviceCodeLogin();
+    res.json({
+      ok: true,
+      message: 'Please check your console for the device code and visit the URL to authenticate.',
+      code: authResponse.userCode,
+      verificationUri: authResponse.verificationUri
+    });
+  } catch (error) {
+    console.error('Auth error:', error);
+    res.status(500).json({ ok: false, error: error.message });
+  }
+});
+
+// 3) Check auth status
+app.get("/auth/outlook/status", async (req, res) => {
+  try {
+    const token = await getToken();
+    res.json({ authenticated: !!token });
+  } catch (error) {
+    res.json({ authenticated: false, error: error.message });
+  }
+});
+
+// 4) Invoke: run one verb
+app.post("/invoke", async (req, res) => {
+  console.log('Received request:', JSON.stringify(req.body, null, 2));
   const { tool, verb, args, caller_id } = req.body || {};
   const m = manifests[tool];
   if (!m) return res.status(404).json({ ok:false, code:10, msg:"TOOL_NOT_FOUND" });
   const v = m.verbs.find(x => x.id === verb);
   if (!v) return res.status(400).json({ ok:false, code:10, msg:"VERB_NOT_FOUND" });
+
+  // Check for Outlook authentication
+  if (tool === 'outlook') {
+    const token = await getToken();
+    if (!token) {
+      return res.status(401).json({ 
+        ok: false, 
+        code: 401, 
+        needs_login: "outlook", 
+        login_url: "http://localhost:4000/auth/outlook/device" 
+      });
+    }
+    // Add token to the environment for the adapter
+    process.env.GRAPH_TOKEN = token;
+  }
 
   // honor "confirm: true" from manifest
   if (v.confirm && req.header("x-confirm") !== "yes") {

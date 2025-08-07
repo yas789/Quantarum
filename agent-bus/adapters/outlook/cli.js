@@ -3,7 +3,8 @@ const fetch = require("node-fetch");
 const GRAPH = "https://graph.microsoft.com/v1.0";
 
 const payload = JSON.parse(process.argv[2] || "{}");
-const { verb, args, token } = payload;
+const { verb, args } = payload;
+const token = process.env.GRAPH_TOKEN; // Get token from environment
 
 (async () => {
   try {
