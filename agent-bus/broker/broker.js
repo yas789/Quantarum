@@ -19,7 +19,7 @@ const config = require('./config');
 const { logger } = require('./logger');
 
 // Import manifests
-const manifests = require('./manifests');
+const manifests = require('./manifests/index');
 
 // Handle process termination
 async function shutdown() {
@@ -41,24 +41,7 @@ process.on('unhandledRejection', (reason, promise) => {
   logger.error('Unhandled Rejection at:', { promise, reason });
 });
 
-// Start the server
-const PORT = process.env.PORT || 3000;
-const server = app.listen(PORT, () => {
-  logger.info(`Agent Bus server running on port ${PORT}`);
-});
-
-// Handle server errors
-server.on('error', (error) => {
-  logger.error('Server error', { error: error.message });
-  process.exit(1);
-});
-
-// Handle process termination
-process.on('SIGTERM', shutdown);
-process.on('SIGINT', shutdown);
-process.on('unhandledRejection', (reason, promise) => {
-  logger.error('Unhandled Rejection at:', { promise, reason });
-});
+// Server will be started at the end of the file
 
 // 1) Capabilities: agents discover tools here
 app.get("/capabilities", (_req, res) => {
@@ -163,8 +146,12 @@ app.post("/invoke", async (req, res) => {
   });
 });
 
+// Start the server
 const PORT = process.env.PORT || 4000;
-app.listen(PORT, () => console.log(`Broker running at http://localhost:${PORT}`));
+const server = app.listen(PORT, () => {
+  logger.info(`Agent Bus broker running on port ${PORT}`);
+  console.log(`Broker running at http://localhost:${PORT}`);
+});
 
 function log(obj){
   const line = JSON.stringify({ ts:new Date().toISOString(), ...obj }) + "\n";

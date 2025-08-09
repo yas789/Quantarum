@@ -1,0 +1,60 @@
+name: Filesystem
+version: '1.0'
+description: Read and write files on the local filesystem
+verbs:
+  - id: read
+    description: Read the contents of a file
+    args_schema:
+      type: object
+      required: [path]
+      properties:
+        path:
+          type: string
+          description: Path to the file to read
+    returns_schema:
+      type: object
+      properties:
+        content:
+          type: string
+          description: The contents of the file
+    confirm: false
+
+  - id: write
+    description: Write content to a file
+    args_schema:
+      type: object
+      required: [path, content]
+      properties:
+        path:
+          type: string
+          description: Path where the file should be written
+        content:
+          type: string
+          description: Content to write to the file
+    returns_schema:
+      type: object
+      properties:
+        success:
+          type: boolean
+        path:
+          type: string
+    confirm: true
+
+examples:
+  - description: Read a file
+    request:
+      verb: read
+      args:
+        path: "/path/to/file.txt"
+    response:
+      content: "File contents here"
+
+  - description: Write to a file
+    request:
+      verb: write
+      args:
+        path: "/path/to/file.txt"
+        content: "Content to write"
+    response:
+      success: true
+      path: "/path/to/file.txt"
