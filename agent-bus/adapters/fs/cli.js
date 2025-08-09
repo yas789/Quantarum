@@ -30,7 +30,16 @@ const requireArgs = (args, required) => {
 // Main handler
 (async () => {
   try {
-    switch (verb) {
+    if (!verb) {
+      throw new Error('No verb provided');
+    }
+    
+    // Handle both 'fs.verb' and 'verb' formats
+    const verbName = verb.startsWith('fs.') ? verb.split('.')[1] : verb;
+    
+    console.error(`FS Adapter: Processing verb '${verbName}' with args:`, JSON.stringify(args, null, 2));
+    
+    switch (verbName) {
       case 'fs.read':
         requireArgs(args, ['path']);
         const content = await fs.readFile(args.path, args.encoding || 'utf8');
@@ -114,9 +123,17 @@ const requireArgs = (args, required) => {
         return fail(10, 'UNKNOWN_VERB');
     }
   } catch (error) {
-    // Handle common filesystem errors
+    console.error('FS Adapter Error:', {
+      message: error.message,
+      stack: error.stack,
+      verb,
+      args: JSON.stringify(args, null, 2),
+      code: error.code,
+      path: error.path
+    });
+    
     if (error.code === 'ENOENT') {
-      return fail(44, 'FILE_NOT_FOUND', { path: error.path });
+      return fail(12, 'FILE_NOT_FOUND', { path: error.path });
     }
     if (error.code === 'EACCES') {
       return fail(13, 'PERMISSION_DENIED', { path: error.path });

@@ -26,7 +26,10 @@ async function shutdown() {
   logger.info('Shutting down...');
   
   try {
-    await broker.stop();
+    if (server) {
+      await new Promise((resolve) => server.close(resolve));
+      logger.info('Server closed');
+    }
     process.exit(0);
   } catch (error) {
     logger.error('Error during shutdown', { error: error.message });
@@ -100,7 +103,9 @@ app.post("/invoke", async (req, res) => {
   const { tool, verb, args, caller_id } = req.body || {};
   const m = manifests[tool];
   if (!m) return res.status(404).json({ ok:false, code:10, msg:"TOOL_NOT_FOUND" });
-  const v = m.verbs.find(x => x.id === verb);
+  
+  // Find the verb - either exact match or prefixed with tool name
+  const v = m.verbs.find(x => x.id === verb || x.id === `${tool}.${verb}`);
   if (!v) return res.status(400).json({ ok:false, code:10, msg:"VERB_NOT_FOUND" });
 
   // Check for Outlook authentication
