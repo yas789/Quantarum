@@ -1,8 +1,7 @@
 #!/usr/bin/env node
 const fs = require('fs').promises;
 const path = require('path');
-const { promisify } = require('util');
-const glob = promisify(require('glob'));
+const glob = require('glob').glob;
 
 // Read the JSON input
 const payload = JSON.parse(process.argv[2] || '{}');

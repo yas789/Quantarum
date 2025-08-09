@@ -1,9 +1,6 @@
 #!/usr/bin/env node
-const clipboardy = require('clipboardy');
-
-// Read the JSON input
-const payload = JSON.parse(process.argv[2] || '{}');
-const { verb, args = {} } = payload;
+// Using dynamic import for ESM module
+let clipboardy;
 
 // Helper functions
 const ok = (data) => console.log(JSON.stringify({ ok: true, data }));
@@ -28,25 +25,31 @@ const requireArgs = (args, required) => {
 // Main handler
 (async () => {
   try {
+    // Import clipboardy as ESM
+    const module = await import('clipboardy');
+    clipboardy = module.default;
+    
+    // Read the JSON input
+    const payload = JSON.parse(process.argv[2] || '{}');
+    const { verb, args = {} } = payload;
+
     switch (verb) {
       case 'clipboard.get':
         try {
-          const content = await clipboardy.read();
+          // Use readSync to avoid command output issues
+          const content = clipboardy.readSync();
           return ok({
-            content,
+            content: content.replace(/\s+$/, ''), // Trim trailing whitespace
             type: 'text',
             length: content.length
           });
         } catch (error) {
-          // If clipboard is empty, return empty string instead of failing
-          if (error.message.includes('Couldn\'t find the required `xsel` binary')) {
-            return ok({
-              content: '',
-              type: 'text',
-              length: 0
-            });
-          }
-          throw error;
+          // If clipboard is empty or there's an error, return empty string
+          return ok({
+            content: '',
+            type: 'text',
+            length: 0
+          });
         }
 
       case 'clipboard.set':
