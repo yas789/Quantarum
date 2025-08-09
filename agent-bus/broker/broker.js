@@ -1,10 +1,25 @@
 #!/usr/bin/env node
 
 // Entry point for the agent-bus server
+const express = require('express');
+const path = require('path');
+const cors = require('cors');
+const bodyParser = require('body-parser');
 
-const broker = require('./app');
+// Initialize Express app
+const app = express();
+
+// Middleware
+app.use(cors());
+app.use(bodyParser.json());
+app.use(express.static(path.join(__dirname, 'public')));
+
+// Load configuration and logger
 const config = require('./config');
 const { logger } = require('./logger');
+
+// Import manifests
+const manifests = require('./manifests');
 
 // Handle process termination
 async function shutdown() {
@@ -27,26 +42,47 @@ process.on('unhandledRejection', (reason, promise) => {
 });
 
 // Start the server
-(async () => {
-  try {
-    await broker.start(config.PORT);
-    logger.info('Agent Bus is ready');
-  } catch (error) {
-    logger.error('Failed to start Agent Bus', { error: error.message });
-    process.exit(1);
-  }
-})();
+const PORT = process.env.PORT || 3000;
+const server = app.listen(PORT, () => {
+  logger.info(`Agent Bus server running on port ${PORT}`);
+});
+
+// Handle server errors
+server.on('error', (error) => {
+  logger.error('Server error', { error: error.message });
+  process.exit(1);
+});
+
+// Handle process termination
+process.on('SIGTERM', shutdown);
+process.on('SIGINT', shutdown);
+process.on('unhandledRejection', (reason, promise) => {
+  logger.error('Unhandled Rejection at:', { promise, reason });
+});
 
 // 1) Capabilities: agents discover tools here
 app.get("/capabilities", (_req, res) => {
-  res.json({
-    schema_version: "0.1",
-    tools: Object.entries(manifests).map(([tool_id, m]) => ({
+  try {
+    const tools = Object.entries(manifests).map(([tool_id, m]) => ({
       tool_id,
       version: m.version,
-      verbs: m.verbs
-    }))
-  });
+      description: m.description,
+      verbs: m.verbs.map(v => ({
+        id: v.id,
+        description: v.description,
+        args_schema: v.args_schema,
+        confirm: v.confirm || false
+      }))
+    }));
+    
+    res.json({
+      schema_version: "0.1",
+      tools
+    });
+  } catch (error) {
+    logger.error('Error in /capabilities', { error: error.message });
+    res.status(500).json({ error: 'Failed to load capabilities' });
+  }
 });
 
 // 2) Auth endpoints

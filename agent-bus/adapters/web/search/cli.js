@@ -34,20 +34,32 @@ const SEARCH_ENGINES = {
   google: {
     baseUrl: 'https://www.google.com/search',
     selectors: {
-      results: 'div.g',
+      results: 'div[jsname="U8erHd"]',
       title: 'h3',
-      link: 'a[href^="/url?"]',
-      snippet: 'div.VwiC3b',
-      next: 'a#pnnext',
+      link: 'a[href^="http"]',
+      snippet: 'div[data-sncf]',
+      next: 'a[aria-label^="Next"]',
     },
     params: {
       q: '',
       num: 10,
       start: 0,
+      hl: 'en',
+      gl: 'us',
     },
     headers: {
-      'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
+      'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36',
       'Accept-Language': 'en-US,en;q=0.9',
+      'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
+      'Accept-Encoding': 'gzip, deflate, br',
+      'DNT': '1',
+      'Connection': 'keep-alive',
+      'Upgrade-Insecure-Requests': '1',
+      'Sec-Fetch-Dest': 'document',
+      'Sec-Fetch-Mode': 'navigate',
+      'Sec-Fetch-Site': 'none',
+      'Sec-Fetch-User': '?1',
+      'Cache-Control': 'max-age=0',
     },
   },
   bing: {
@@ -90,22 +102,55 @@ function extractSearchResults(html, engine) {
 
   $(selectors.results).each((_, element) => {
     try {
-      const title = $(element).find(selectors.title).text().trim();
-      let link = $(element).find(selectors.link).attr('href');
+      const titleElement = $(element).find(selectors.title).first();
+      const linkElement = titleElement.length ? titleElement : $(element).find(selectors.link).first();
       
-      // Handle Google's URL format
+      const title = titleElement.length ? titleElement.text().trim() : '';
+      let link = linkElement.attr('href');
+      
+      // Clean up Google's URL format
       if (engine === 'google' && link) {
-        const url = new URL('https://google.com' + link);
-        link = url.searchParams.get('q') || link;
+        try {
+          // Handle both relative and absolute URLs
+          const baseUrl = link.startsWith('http') ? '' : 'https://www.google.com';
+          const url = new URL(link, baseUrl);
+          
+          // Extract the actual URL from Google's redirect
+          if (url.hostname === 'www.google.com' && url.pathname === '/url') {
+            link = url.searchParams.get('url') || link;
+          }
+          
+          // Ensure we have a proper URL
+          if (!link.startsWith('http')) {
+            link = 'https://' + link.replace(/^\/\//, '');
+          }
+        } catch (e) {
+          console.error('Error parsing URL:', e.message);
+        }
       }
       
-      const snippet = $(element).find(selectors.snippet).text().trim();
+      // Get the snippet, falling back to a nearby element if the primary selector fails
+      let snippet = $(element).find(selectors.snippet).text().trim();
+      if (!snippet) {
+        // Try alternative selectors for snippet
+        const possibleSnippets = [
+          $(element).find('div[role="heading"] + div').text().trim(),
+          $(element).find('div:contains(".")').first().text().trim(),
+          $(element).find('div:not(:has(*))').first().text().trim()
+        ];
+        snippet = possibleSnippets.find(s => s && s.length > 10 && s.length < 300) || '';
+      }
       
-      if (title && link) {
+      // Clean up the data
+      const cleanTitle = title.replace(/\s+/g, ' ').trim();
+      const cleanSnippet = snippet.replace(/\s+/g, ' ').trim();
+      
+      // Only add if we have both title and link
+      if (cleanTitle && link) {
         results.push({
-          title,
-          link,
-          snippet,
+          title: cleanTitle,
+          link: link,
+          snippet: cleanSnippet,
         });
       }
     } catch (error) {
@@ -119,12 +164,12 @@ function extractSearchResults(html, engine) {
 // Perform a search
 async function performSearch(query, options = {}) {
   const {
-    engine = 'google',
+    engine = 'duckduckgo', // Default to DuckDuckGo instead of Google
     page = 1,
     limit = 10,
-    region = 'us',
+    region = 'us-en',
     safe_search = 'moderate',
-    timeout = 10000,
+    timeout = 30000, // Further increased timeout
   } = options;
 
   if (!SEARCH_ENGINES[engine]) {
@@ -158,8 +203,13 @@ async function performSearch(query, options = {}) {
     params,
     headers: {
       ...config.headers,
-      'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
+      'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36',
       'Accept-Language': 'en-US,en;q=0.9',
+      'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
+      'DNT': '1',
+      'Connection': 'keep-alive',
+      'Upgrade-Insecure-Requests': '1',
+      'Cache-Control': 'max-age=0',
     },
     timeout,
     responseType: 'text',
