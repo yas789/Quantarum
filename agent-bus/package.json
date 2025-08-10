@@ -2,10 +2,10 @@
   "name": "agent-bus",
   "version": "1.0.0",
   "description": "A local gateway for agent operations with standardized verbs",
-  "main": "broker/broker.js",
+  "main": "broker/server.js",
   "scripts": {
-    "start": "node broker/broker.js",
-    "dev": "nodemon broker/broker.js",
+    "start": "node broker/server.js",
+    "dev": "nodemon broker/server.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [

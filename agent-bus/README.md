@@ -43,11 +43,11 @@ A local HTTP broker system for agent automation with support for various adapter
 ### Starting the Broker
 
 ```bash
-# Start the broker
-node broker/broker.js
+# Start the broker (new entry)
+node broker/server.js
 ```
 
-The broker will be available at `http://localhost:3000` by default.
+The broker will be available at `http://localhost:4000` by default.
 
 ### API Endpoints
 
@@ -59,12 +59,12 @@ The broker will be available at `http://localhost:3000` by default.
 
 #### List Capabilities
 ```bash
-curl http://localhost:3000/capabilities
+curl http://localhost:4000/capabilities
 ```
 
 #### Read a File
 ```bash
-curl -X POST http://localhost:3000/invoke \
+curl -X POST http://localhost:4000/invoke \
   -H "Content-Type: application/json" \
   -d '{"tool":"fs","verb":"read","args":{"path":"/path/to/file.txt"}}'
 ```
@@ -134,4 +134,3 @@ agent-bus/
 2. Add a `cli.js` file that implements the adapter interface
 3. Create a `manifest.yaml` file describing the adapter's capabilities
 4. Register the adapter in `broker/adapters.js`
-

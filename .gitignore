@@ -1,0 +1,38 @@
+# OS / Editor
+.DS_Store
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Dependencies and builds
+node_modules/
+dist/
+build/
+coverage/
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Caches
+.eslintcache
+.npm/
+.cache/
+.yarn-integrity
+*.tgz
+.node_repl_history
+
+# Env files
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Project-specific
+agent-bus/broker/.token-cache.json
+agent-bus/broker/logs/

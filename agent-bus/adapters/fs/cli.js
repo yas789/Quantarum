@@ -34,12 +34,12 @@ const requireArgs = (args, required) => {
       throw new Error('No verb provided');
     }
     
-    // Handle both 'fs.verb' and 'verb' formats
-    const verbName = verb.startsWith('fs.') ? verb.split('.')[1] : verb;
+    // Normalize to full verb id: ensure it starts with 'fs.'
+    const verbId = verb && verb.startsWith('fs.') ? verb : `fs.${verb}`;
     
     console.error(`FS Adapter: Processing verb '${verbName}' with args:`, JSON.stringify(args, null, 2));
     
-    switch (verbName) {
+    switch (verbId) {
       case 'fs.read':
         requireArgs(args, ['path']);
         const content = await fs.readFile(args.path, args.encoding || 'utf8');
