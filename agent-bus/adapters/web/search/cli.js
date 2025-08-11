@@ -12,6 +12,7 @@ const { verb, args = {} } = payload;
 // Helper functions
 const ok = (data) => console.log(JSON.stringify({ ok: true, data }));
 const fail = (code, msg, details) => {
+  
   console.error(JSON.stringify({ 
     ok: false, 
     code, 

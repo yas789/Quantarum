@@ -21,7 +21,7 @@ const manifestSchema = {
         type: 'object',
         required: ['id', 'args', 'returns'],
         properties: {
-          id: { type: 'string', pattern: '^[a-z]+\\.[a-z][a-z0-9_]*$' },
+          id: { type: 'string', pattern: '^[a-z][a-z0-9_]*\\.[a-z][a-z0-9_]*$' },
           description: { type: 'string' },
           args: { type: 'object' },
           returns: { type: 'object' },

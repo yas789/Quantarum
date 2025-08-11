@@ -69,6 +69,11 @@ curl -X POST http://localhost:4000/invoke \
   -d '{"tool":"fs","verb":"read","args":{"path":"/path/to/file.txt"}}'
 ```
 
+#### Send an Email (local Mail.app)
+curl -X POST http://localhost:4000/invoke \
+  -H "Content-Type: application/json" -H "x-confirm: yes" \
+  -d '{"tool":"mail_local","verb":"send","args":{"to":["recipient@example.com"],"subject":"Hello","body":"Hi!"}}'
+
 #### Search the Web
 ```bash
 curl -X POST http://localhost:3000/invoke \

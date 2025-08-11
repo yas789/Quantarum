@@ -106,6 +106,8 @@ class Broker {
       });
     });
 
+    // Outlook desktop mode: no auth endpoints needed
+
     // Plan tool usage
     this.app.post('/plan', async (req, res, next) => {
       try {
@@ -148,12 +150,15 @@ class Broker {
           });
         }
         
+        // Determine the full verb id (accept shorthand like 'read')
+        const requestedVerbId = this.verbCache.has(verb) ? verb : `${tool}.${verb}`;
+
         // Check toolpack access if toolpack_id is provided
         if (toolpack_id) {
           const { valid, error, message } = this.toolRouter.validateToolpackAccess(
             toolpack_id,
             tool,
-            verb
+            requestedVerbId
           );
           
           if (!valid) {
@@ -167,7 +172,7 @@ class Broker {
         }
         
         // Find the tool and verb
-        const verbInfo = this.verbCache.get(verb);
+        const verbInfo = this.verbCache.get(requestedVerbId);
         if (!verbInfo || verbInfo.toolId !== tool) {
           return res.status(404).json({
             ok: false,
@@ -190,7 +195,7 @@ class Broker {
         }
         
         // Execute the tool
-        const result = await this.executeTool(tool, verb, args);
+        const result = await this.executeTool(tool, requestedVerbId, args);
         const duration = Date.now() - startTime;
         
         // Log the invocation
@@ -208,7 +213,7 @@ class Broker {
           data: result.data,
           meta: {
             tool,
-            verb,
+            verb: requestedVerbId,
             duration_ms: duration,
             request_id: requestId
           }
@@ -232,7 +237,7 @@ class Broker {
     });
   }
 
-  async executeTool(tool, verb, args) {
+  async executeTool(tool, verb, args, envExtra = {}) {
     const adapterPath = path.join(__dirname, '..', 'adapters', tool, 'cli.js');
     
     try {
@@ -242,7 +247,7 @@ class Broker {
       return new Promise((resolve, reject) => {
         const payload = JSON.stringify({ verb, args });
         const child = spawn('node', [adapterPath, payload], {
-          env: { ...process.env, PATH: process.env.PATH },
+          env: { ...process.env, PATH: process.env.PATH, ...envExtra },
           stdio: ['ignore', 'pipe', 'pipe']
         });
         

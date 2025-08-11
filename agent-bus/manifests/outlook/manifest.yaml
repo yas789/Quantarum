@@ -1,0 +1,34 @@
+# Outlook adapter (Microsoft Graph)
+# Trust Tier: A (API-based, requires user login)
+tool_id: outlook
+version: 1.0.0
+trust_tier: "C"
+description: "Send email via Outlook desktop (AppleScript)"
+verbs:
+  - id: outlook.send
+    description: Send an email using Outlook desktop
+    confirm: true
+    args:
+      type: object
+      required: [to, subject, body]
+      properties:
+        to:
+          type: string
+          description: Recipient email address
+        subject:
+          type: string
+          description: Email subject line
+        body:
+          type: string
+          description: Email body text
+      additionalProperties: false
+    returns:
+      type: object
+      properties:
+        success:
+          type: boolean
+          description: Whether sending succeeded
+    examples:
+      - name: Send a quick email
+        call: { to: "user@example.com", subject: "Hello", body: "Hi there" }
+        expect: { success: true }
