@@ -8,7 +8,7 @@ const os = require('os');
 
 // Read the JSON input
 const payload = JSON.parse(process.argv[2] || '{}');
-const { verb, args = {} } = payload;
+let { verb, args = {} } = payload;
 
 // Helper functions
 const ok = (data) => console.log(JSON.stringify({ ok: true, data }));
@@ -84,6 +84,12 @@ const getCalendarId = async (calendarName = 'Home') => {
 // Main handler
 (async () => {
   try {
+    // Normalize verbs: accept 'create'/'invite' short forms
+    if (verb && !verb.startsWith('calendar_local.')) {
+      if (verb === 'create') verb = 'calendar_local.create';
+      if (verb === 'invite') verb = 'calendar_local.invite';
+    }
+
     switch (verb) {
       case 'calendar_local.create':
         requireArgs(args, ['title', 'start']);
@@ -215,6 +221,37 @@ const getCalendarId = async (calendarName = 'Home') => {
           } catch (cleanupError) {
             console.error('Error cleaning up temporary file:', cleanupError);
           }
+        }
+
+      case 'calendar_local.invite':
+        requireArgs(args, ['eventId', 'attendees']);
+        if (!Array.isArray(args.attendees) || args.attendees.length === 0) {
+          return fail(10, 'MISSING_ARGUMENTS', { missing: ['attendees'] });
+        }
+
+        try {
+          const attendeesArray = args.attendees.map(String);
+          const jsArray = attendeesArray.map(a => `'${a.replace(/'/g, "\\'")}'`).join(", ");
+          const script = `
+            tell application "Calendar"
+              set targetEvent to missing value
+              repeat with cal in calendars
+                set evts to every event of cal whose id is "${String(args.eventId).replace(/"/g, '\\"')}"
+                if (count of evts) > 0 then
+                  set targetEvent to item 1 of evts
+                  exit repeat
+                end if
+              end repeat
+              if targetEvent is missing value then error "Event not found"
+              set emails to {${jsArray}}
+              repeat with addr in emails
+                tell targetEvent to make new attendee at end of attendees with properties {email:addr}
+              end repeat
+            end tell`;
+          await execAsync(`osascript -e '${script.replace(/\n/g, ' ').replace(/\s+/g, ' ')}'`);
+          return ok({ success: true, added: attendeesArray.length });
+        } catch (e) {
+          return fail(50, 'ADAPTER_ERROR', { message: e.message });
         }
 
       default:

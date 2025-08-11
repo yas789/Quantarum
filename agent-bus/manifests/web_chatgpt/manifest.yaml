@@ -1,11 +1,10 @@
-# ChatGPT Web adapter
-# Trust Tier: B (Uses browser automation to interact with chat.openai.com)
-tool_id: web.chatgpt
+# ChatGPT Web adapter (normalized)
+tool_id: web_chatgpt
 version: 1.0.0
 trust_tier: "B"
 description: "Interact with ChatGPT through the web interface"
 verbs:
-  - id: web.chatgpt.chat.new
+  - id: web_chatgpt.new
     description: Start a new chat
     args:
       type: object
@@ -25,14 +24,7 @@ verbs:
           type: string
           format: uri
           description: URL of the new chat
-    examples:
-      - name: Start a new chat
-        call: {}
-        expect:
-          chatId: "chat-123"
-          url: "https://chat.openai.com/chat/abc123"
-
-  - id: web.chatgpt.chat.send
+  - id: web_chatgpt.send
     description: Send a message to the current chat
     args:
       type: object
@@ -60,14 +52,7 @@ verbs:
         success:
           type: boolean
           description: Whether the message was sent successfully
-    examples:
-      - name: Send a message and get response
-        call: { message: "Hello, how are you?" }
-        expect:
-          response: "Hello! I'm just a computer program, so I don't have feelings, but I'm functioning well. How can I assist you today?"
-          success: true
-
-  - id: web.chatgpt.chat.history
+  - id: web_chatgpt.history
     description: Get the chat history
     args:
       type: object
@@ -90,27 +75,12 @@ verbs:
               role:
                 type: string
                 enum: ["user", "assistant"]
-                description: Who sent the message
               content:
                 type: string
-                description: The message content
               timestamp:
                 type: string
                 format: date-time
-                description: When the message was sent
-    examples:
-      - name: Get chat history
-        call: { limit: 2 }
-        expect:
-          messages:
-            - role: "user"
-              content: "Hello, how are you?"
-              timestamp: "2023-05-01T12:00:00Z"
-            - role: "assistant"
-              content: "Hello! I'm just a computer program, so I don't have feelings, but I'm functioning well. How can I assist you today?"
-              timestamp: "2023-05-01T12:00:05Z"
-
-  - id: web.chatgpt.chat.clear
+  - id: web_chatgpt.clear
     description: Clear the current chat
     confirm: true
     args:
@@ -122,8 +92,4 @@ verbs:
       properties:
         success:
           type: boolean
-          description: Whether the chat was cleared successfully
-    examples:
-      - name: Clear the chat
-        call: {}
-        expect: { success: true }
+

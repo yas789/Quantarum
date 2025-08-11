@@ -37,7 +37,7 @@ const requireArgs = (args, required) => {
     // Normalize to full verb id: ensure it starts with 'fs.'
     const verbId = verb && verb.startsWith('fs.') ? verb : `fs.${verb}`;
     
-    console.error(`FS Adapter: Processing verb '${verbName}' with args:`, JSON.stringify(args, null, 2));
+    console.error(`FS Adapter: Processing verb '${verbId}' with args:`, JSON.stringify(args, null, 2));
     
     switch (verbId) {
       case 'fs.read':

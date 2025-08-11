@@ -1,11 +1,10 @@
-# Web Search adapter
-# Trust Tier: B (Uses browser automation to perform searches)
-tool_id: web.search
+# Web Search adapter (normalized)
+tool_id: web_search
 version: 1.0.0
 trust_tier: "B"
 description: "Web search functionality via search engines"
 verbs:
-  - id: web.search
+  - id: web_search.search
     description: Perform a web search and return results
     args:
       type: object
@@ -76,3 +75,4 @@ verbs:
               snippet: "Explore the latest research in artificial intelligence from Stanford's leading researchers..."
               source: "stanford.edu"
           searchUrl: "https://www.google.com/search?q=latest+AI+research+papers"
+

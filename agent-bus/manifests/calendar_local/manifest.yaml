@@ -71,3 +71,39 @@ verbs:
           eventId: "event123"
           start: "2023-06-01T14:00:00+01:00"
           end: "2023-06-01T15:00:00+01:00"
+
+  - id: calendar_local.invite
+    description: Add attendees to an existing calendar event and send invites
+    confirm: true
+    args:
+      type: object
+      required: [eventId, attendees]
+      properties:
+        eventId:
+          type: string
+          description: Identifier of the target event (as returned by create)
+        attendees:
+          type: array
+          items:
+            type: string
+            format: email
+          minItems: 1
+          description: Email addresses to invite
+      additionalProperties: false
+    returns:
+      type: object
+      properties:
+        success:
+          type: boolean
+          description: Whether attendees were added successfully
+        added:
+          type: integer
+          description: Number of attendees added
+    examples:
+      - name: Invite two people to an event
+        call:
+          eventId: "event123"
+          attendees: ["a@example.com", "b@example.com"]
+        expect:
+          success: true
+          added: 2
