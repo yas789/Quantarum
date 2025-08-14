@@ -1,0 +1,102 @@
+# Generic Calendar adapter wrapper
+# Trust Tier: C (Proxies to local Calendar.app via AppleScript)
+tool_id: calendar
+version: 1.0.0
+trust_tier: "C"
+description: "Generic calendar verbs (create/invite), locally backed by Calendar.app"
+verbs:
+  - id: calendar.create
+    description: Create a new calendar event
+    confirm: true
+    args:
+      type: object
+      required: [title, start]
+      properties:
+        title:
+          type: string
+          description: Title of the event
+        start:
+          type: string
+          format: date-time
+          description: Start time (ISO 8601)
+        end:
+          type: string
+          format: date-time
+          description: End time (ISO 8601). Defaults to +1 hour.
+        allDay:
+          type: boolean
+          default: false
+          description: Whether this is an all-day event
+        location:
+          type: string
+          description: Location of the event
+        notes:
+          type: string
+          description: Additional notes for the event
+        attendees:
+          type: array
+          items:
+            type: string
+            format: email
+          description: Email addresses of attendees
+        calendar:
+          type: string
+          default: "Home"
+          description: Target calendar name
+      additionalProperties: false
+    returns:
+      type: object
+      properties:
+        eventId:
+          type: string
+        start:
+          type: string
+          format: date-time
+        end:
+          type: string
+          format: date-time
+    examples:
+      - name: Create dinner
+        call:
+          title: "Dinner at Casa"
+          start: "2025-08-12T19:00:00-07:00"
+          end: "2025-08-12T20:30:00-07:00"
+          location: "Casa" 
+          attendees: ["a@example.com"]
+        expect:
+          eventId: "evt_123"
+
+  - id: calendar.invite
+    description: Add attendees to an existing event and send invites
+    confirm: true
+    args:
+      type: object
+      required: [eventId, attendees]
+      properties:
+        eventId:
+          type: string
+          description: Identifier returned by calendar.create
+        attendees:
+          type: array
+          items:
+            type: string
+            format: email
+          minItems: 1
+          description: Email addresses to invite
+      additionalProperties: false
+    returns:
+      type: object
+      properties:
+        success:
+          type: boolean
+        added:
+          type: integer
+    examples:
+      - name: Invite two guests
+        call:
+          eventId: "evt_123"
+          attendees: ["guest1@example.com", "guest2@example.com"]
+        expect:
+          success: true
+          added: 2
+

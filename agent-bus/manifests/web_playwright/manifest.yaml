@@ -1,0 +1,138 @@
+# Web automation adapter (Playwright)
+# Trust Tier: B (Local browser automation)
+tool_id: web_playwright
+version: 1.0.0
+trust_tier: "B"
+description: "Web automation via Playwright with resilient locators"
+verbs:
+  - id: web_playwright.open
+    description: Open a URL in a browser context
+    args:
+      type: object
+      required: [url]
+      properties:
+        url: { type: string, format: uri }
+        headless: { type: boolean, default: true }
+        waitUntil: { type: string, enum: ["load","domcontentloaded","networkidle"] }
+        session_id: { type: string, description: "Persist context across calls" }
+      additionalProperties: false
+    returns:
+      type: object
+      properties:
+        title: { type: string }
+        url: { type: string, format: uri }
+
+  - id: web_playwright.click
+    description: Click an element found by resilient locator
+    args:
+      type: object
+      required: [locator]
+      properties:
+        url: { type: string, format: uri, description: "Optional navigate first" }
+        locator:
+          oneOf:
+            - { type: string, description: "Selector (supports prefixes: text=, role=, label=, placeholder=, testId=, css=, xpath=)" }
+            - type: object
+              properties:
+                role: { type: string }
+                name: { type: string }
+                exact: { type: boolean }
+                text: { type: string }
+                label: { type: string }
+                placeholder: { type: string }
+                testId: { type: string }
+                css: { type: string }
+                xpath: { type: string }
+        waitForNavigation: { type: [boolean,string], description: "true or load state" }
+        headless: { type: boolean, default: true }
+        timeout: { type: integer, default: 30000 }
+        session_id: { type: string }
+      additionalProperties: false
+    returns:
+      type: object
+      properties: { success: { type: boolean } }
+
+  - id: web_playwright.fill
+    description: Fill an input using resilient locator
+    args:
+      type: object
+      required: [locator, value]
+      properties:
+        url: { type: string, format: uri }
+        locator:
+          oneOf:
+            - { type: string }
+            - { type: object }
+        value: { type: string }
+        submit: { type: boolean, default: false }
+        headless: { type: boolean, default: true }
+        timeout: { type: integer, default: 30000 }
+        session_id: { type: string }
+      additionalProperties: false
+    returns:
+      type: object
+      properties: { success: { type: boolean } }
+
+  - id: web_playwright.read
+    description: Read text/html/value/attribute from an element
+    args:
+      type: object
+      required: [locator]
+      properties:
+        url: { type: string, format: uri }
+        locator:
+          oneOf:
+            - { type: string }
+            - { type: object }
+        as: { type: string, enum: ["text","html","value","attribute"], default: "text" }
+        attribute: { type: string }
+        headless: { type: boolean, default: true }
+        timeout: { type: integer, default: 30000 }
+        session_id: { type: string }
+      additionalProperties: false
+    returns:
+      type: object
+      properties: { value: { type: string } }
+
+  - id: web_playwright.wait
+    description: Wait for element state or timeout
+    args:
+      type: object
+      properties:
+        url: { type: string, format: uri }
+        locator:
+          oneOf:
+            - { type: string }
+            - { type: object }
+        state: { type: string, enum: ["load","domcontentloaded","networkidle","visible","hidden","attached","detached"] }
+        visible: { type: boolean }
+        hidden: { type: boolean }
+        timeout: { type: integer, default: 30000 }
+        ms: { type: integer }
+        headless: { type: boolean, default: true }
+        session_id: { type: string }
+      additionalProperties: false
+    returns:
+      type: object
+      properties: { success: { type: boolean } }
+
+  - id: web_playwright.upload
+    description: Upload file to an input element
+    confirm: true
+    args:
+      type: object
+      required: [locator, filePath]
+      properties:
+        url: { type: string, format: uri }
+        locator:
+          oneOf:
+            - { type: string }
+            - { type: object }
+        filePath: { type: string }
+        headless: { type: boolean, default: true }
+        session_id: { type: string }
+      additionalProperties: false
+    returns:
+      type: object
+      properties: { success: { type: boolean } }
+
