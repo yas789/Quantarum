@@ -1,0 +1,608 @@
+# Enhanced Web automation adapter with persistent sessions
+# Trust Tier: B (Uses browser automation with enhanced capabilities)
+tool_id: web_enhanced
+version: 2.0.0
+trust_tier: "B"
+description: "Enhanced web browser automation with persistent sessions, human-like interactions, and multi-tab support"
+
+verbs:
+  - id: web_enhanced.createSession
+    description: Create a persistent browser session
+    args:
+      type: object
+      required: [sessionId]
+      properties:
+        sessionId:
+          type: string
+          description: Unique identifier for the session
+        options:
+          type: object
+          description: Session configuration options
+          properties:
+            headless:
+              type: boolean
+              default: false
+              description: Whether to run in headless mode
+            viewport:
+              type: object
+              description: Browser viewport size
+              properties:
+                width:
+                  type: integer
+                  default: 1920
+                height:
+                  type: integer
+                  default: 1080
+            userAgent:
+              type: string
+              description: Custom user agent string
+            blockResources:
+              oneOf:
+                - type: boolean
+                - type: array
+                  items:
+                    type: string
+                    enum: ["image", "font", "media", "stylesheet", "script"]
+              description: Resources to block for faster loading
+            blockDomains:
+              type: array
+              items:
+                type: string
+              description: Domains to block completely
+            contextOptions:
+              type: object
+              description: Additional Playwright context options
+      additionalProperties: false
+    returns:
+      type: object
+      properties:
+        sessionId:
+          type: string
+          description: The created session ID
+        created:
+          type: boolean
+          description: Whether session was created successfully
+        options:
+          type: object
+          description: Applied session options
+    examples:
+      - name: Create a session with resource blocking
+        call: 
+          sessionId: "work-session"
+          options:
+            headless: false
+            blockResources: ["image", "font"]
+        expect: 
+          sessionId: "work-session"
+          created: true
+
+  - id: web_enhanced.open
+    description: Open a URL in a browser session
+    args:
+      type: object
+      required: [url]
+      properties:
+        url:
+          type: string
+          format: uri
+          description: URL to open
+        sessionId:
+          type: string
+          default: "default"
+          description: Session ID to use
+        reuseTab:
+          type: boolean
+          default: true
+          description: Whether to reuse existing tab for same domain
+        waitUntil:
+          type: string
+          enum: ["load", "domcontentloaded", "networkidle0", "networkidle2"]
+          default: "load"
+          description: When to consider navigation succeeded
+        timeout:
+          type: integer
+          minimum: 1000
+          default: 30000
+          description: Maximum time to wait in milliseconds
+      additionalProperties: false
+    returns:
+      type: object
+      properties:
+        title:
+          type: string
+          description: Page title
+        url:
+          type: string
+          format: uri
+          description: Final URL after redirects
+        sessionId:
+          type: string
+          description: Session ID used
+    examples:
+      - name: Open website in persistent session
+        call: 
+          url: "https://github.com"
+          sessionId: "github-session"
+        expect: 
+          title: "GitHub"
+          sessionId: "github-session"
+
+  - id: web_enhanced.click
+    description: Click an element with human-like behavior
+    args:
+      type: object
+      required: [locator]
+      properties:
+        locator:
+          oneOf:
+            - type: string
+            - type: object
+          description: Element locator (CSS selector, text=, role=, etc.)
+        sessionId:
+          type: string
+          default: "default"
+          description: Session ID to use
+        humanLike:
+          type: boolean
+          default: true
+          description: Use human-like clicking behavior
+        waitForNavigation:
+          oneOf:
+            - type: boolean
+            - type: string
+              enum: ["load", "domcontentloaded", "networkidle0", "networkidle2"]
+          default: false
+          description: Whether to wait for navigation after clicking
+        timeout:
+          type: integer
+          minimum: 1000
+          default: 30000
+          description: Maximum time to wait in milliseconds
+        url:
+          type: string
+          format: uri
+          description: URL to navigate to first (optional)
+      additionalProperties: false
+    returns:
+      type: object
+      properties:
+        success:
+          type: boolean
+          description: Whether the click was successful
+        sessionId:
+          type: string
+          description: Session ID used
+    examples:
+      - name: Human-like click on button
+        call: 
+          locator: "text=Sign In"
+          sessionId: "login-session"
+          humanLike: true
+        expect: 
+          success: true
+
+  - id: web_enhanced.fill
+    description: Fill a form field with human-like typing
+    args:
+      type: object
+      required: [locator, value]
+      properties:
+        locator:
+          oneOf:
+            - type: string
+            - type: object
+          description: Element locator for the input field
+        value:
+          type: string
+          description: Value to fill
+        sessionId:
+          type: string
+          default: "default"
+          description: Session ID to use
+        humanLike:
+          type: boolean
+          default: true
+          description: Use human-like typing behavior
+        clear:
+          type: boolean
+          default: true
+          description: Clear existing text before typing
+        submit:
+          type: boolean
+          default: false
+          description: Whether to press Enter after filling
+        timeout:
+          type: integer
+          minimum: 1000
+          default: 30000
+          description: Maximum time to wait in milliseconds
+        url:
+          type: string
+          format: uri
+          description: URL to navigate to first (optional)
+      additionalProperties: false
+    returns:
+      type: object
+      properties:
+        success:
+          type: boolean
+          description: Whether the field was filled successfully
+        sessionId:
+          type: string
+          description: Session ID used
+    examples:
+      - name: Fill search box with human-like typing
+        call: 
+          locator: "input[name='q']"
+          value: "playwright automation"
+          humanLike: true
+          submit: true
+        expect: 
+          success: true
+
+  - id: web_enhanced.read
+    description: Read content from the page
+    args:
+      type: object
+      required: [locator]
+      properties:
+        locator:
+          oneOf:
+            - type: string
+            - type: object
+          description: Element locator to read from
+        sessionId:
+          type: string
+          default: "default"
+          description: Session ID to use
+        as:
+          type: string
+          enum: ["text", "html", "value", "attribute"]
+          default: "text"
+          description: What to return from the element
+        attribute:
+          type: string
+          description: Attribute name to read (required when as='attribute')
+        timeout:
+          type: integer
+          minimum: 1000
+          default: 30000
+          description: Maximum time to wait in milliseconds
+        url:
+          type: string
+          format: uri
+          description: URL to navigate to first (optional)
+      additionalProperties: false
+    returns:
+      type: object
+      properties:
+        value:
+          type: string
+          description: The requested value
+        sessionId:
+          type: string
+          description: Session ID used
+    examples:
+      - name: Read page heading
+        call: 
+          locator: "h1"
+          as: "text"
+        expect: 
+          value: "Welcome to the Website"
+
+  - id: web_enhanced.wait
+    description: Wait for elements or conditions with smart waiting
+    args:
+      type: object
+      properties:
+        sessionId:
+          type: string
+          default: "default"
+          description: Session ID to use
+        locator:
+          oneOf:
+            - type: string
+            - type: object
+          description: Element locator to wait for
+        condition:
+          oneOf:
+            - type: string
+            - type: object
+          description: JavaScript condition to wait for
+        state:
+          type: string
+          enum: ["visible", "hidden", "attached", "detached", "load", "domcontentloaded", "networkidle0", "networkidle2"]
+          description: Element or page state to wait for
+        visible:
+          type: boolean
+          description: Wait for element to be visible
+        hidden:
+          type: boolean
+          description: Wait for element to be hidden
+        timeout:
+          type: integer
+          minimum: 100
+          default: 30000
+          description: Maximum time to wait in milliseconds
+        ms:
+          type: integer
+          minimum: 100
+          description: Fixed time to wait in milliseconds
+        url:
+          type: string
+          format: uri
+          description: URL to navigate to first (optional)
+      additionalProperties: false
+    returns:
+      type: object
+      properties:
+        success:
+          type: boolean
+          description: Whether the wait condition was met
+        sessionId:
+          type: string
+          description: Session ID used
+    examples:
+      - name: Wait for element with smart waiting
+        call: 
+          locator: ".loading-complete"
+          state: "visible"
+          timeout: 10000
+        expect: 
+          success: true
+
+  - id: web_enhanced.screenshot
+    description: Take a screenshot of page or element
+    args:
+      type: object
+      properties:
+        sessionId:
+          type: string
+          default: "default"
+          description: Session ID to use
+        selector:
+          oneOf:
+            - type: string
+            - type: object
+          description: Element selector to screenshot (optional, full page if not provided)
+        fullPage:
+          type: boolean
+          default: false
+          description: Take full page screenshot
+        timeout:
+          type: integer
+          minimum: 1000
+          default: 30000
+          description: Maximum time to wait in milliseconds
+        url:
+          type: string
+          format: uri
+          description: URL to navigate to first (optional)
+      additionalProperties: false
+    returns:
+      type: object
+      properties:
+        screenshot:
+          type: string
+          description: Base64 encoded PNG screenshot
+        sessionId:
+          type: string
+          description: Session ID used
+        fullPage:
+          type: boolean
+          description: Whether this was a full page screenshot
+    examples:
+      - name: Take element screenshot
+        call: 
+          selector: ".main-content"
+          sessionId: "work-session"
+        expect: 
+          screenshot: "iVBORw0KGgoAAAA..."
+
+  - id: web_enhanced.openTabs
+    description: Open multiple URLs in different tabs
+    args:
+      type: object
+      required: [urls]
+      properties:
+        urls:
+          type: array
+          items:
+            type: string
+            format: uri
+          description: List of URLs to open in tabs
+        sessionId:
+          type: string
+          default: "default"
+          description: Session ID to use
+        switchTo:
+          type: integer
+          minimum: 0
+          description: Tab index to switch to after opening (optional)
+        waitUntil:
+          type: string
+          enum: ["load", "domcontentloaded", "networkidle0", "networkidle2"]
+          default: "load"
+          description: When to consider navigation succeeded
+        timeout:
+          type: integer
+          minimum: 1000
+          default: 30000
+          description: Maximum time to wait in milliseconds
+      additionalProperties: false
+    returns:
+      type: object
+      properties:
+        tabs:
+          type: array
+          items:
+            type: object
+            properties:
+              index:
+                type: integer
+              url:
+                type: string
+              title:
+                type: string
+          description: Information about opened tabs
+        sessionId:
+          type: string
+          description: Session ID used
+        activeTab:
+          type: integer
+          description: Currently active tab index
+    examples:
+      - name: Open multiple research tabs
+        call: 
+          urls: ["https://github.com", "https://stackoverflow.com", "https://docs.playwright.dev"]
+          switchTo: 1
+        expect: 
+          tabs: [{"index": 0, "url": "https://github.com", "title": "GitHub"}]
+
+  - id: web_enhanced.switchTab
+    description: Switch between open tabs in session
+    args:
+      type: object
+      required: [tabIndex]
+      properties:
+        tabIndex:
+          type: integer
+          minimum: 0
+          description: Index of the tab to switch to
+        sessionId:
+          type: string
+          default: "default"
+          description: Session ID to use
+      additionalProperties: false
+    returns:
+      type: object
+      properties:
+        success:
+          type: boolean
+          description: Whether tab switch was successful
+        tabIndex:
+          type: integer
+          description: Active tab index
+        sessionId:
+          type: string
+          description: Session ID used
+        url:
+          type: string
+          description: URL of the active tab
+        title:
+          type: string
+          description: Title of the active tab
+    examples:
+      - name: Switch to second tab
+        call: 
+          tabIndex: 1
+          sessionId: "work-session"
+        expect: 
+          success: true
+          tabIndex: 1
+
+  - id: web_enhanced.getTabs
+    description: Get information about all open tabs in session
+    args:
+      type: object
+      properties:
+        sessionId:
+          type: string
+          default: "default"
+          description: Session ID to query
+      additionalProperties: false
+    returns:
+      type: object
+      properties:
+        tabs:
+          type: array
+          items:
+            type: object
+            properties:
+              index:
+                type: integer
+              url:
+                type: string
+              title:
+                type: string
+              createdAt:
+                type: number
+          description: Information about all tabs
+        sessionId:
+          type: string
+          description: Session ID queried
+    examples:
+      - name: Get all tabs info
+        call: 
+          sessionId: "work-session"
+        expect: 
+          tabs: [{"index": 0, "url": "https://github.com", "title": "GitHub"}]
+
+  - id: web_enhanced.evaluate
+    description: Execute JavaScript in the browser context
+    args:
+      type: object
+      required: [script]
+      properties:
+        script:
+          type: string
+          description: JavaScript code to execute
+        args:
+          type: array
+          description: Arguments to pass to the script
+        sessionId:
+          type: string
+          default: "default"
+          description: Session ID to use
+        timeout:
+          type: integer
+          minimum: 1000
+          default: 30000
+          description: Maximum time to wait in milliseconds
+        url:
+          type: string
+          format: uri
+          description: URL to navigate to first (optional)
+      additionalProperties: false
+    returns:
+      type: object
+      properties:
+        result:
+          description: Result returned by the script
+        sessionId:
+          type: string
+          description: Session ID used
+    examples:
+      - name: Get page scroll position
+        call: 
+          script: "return { x: window.scrollX, y: window.scrollY }"
+        expect: 
+          result: {"x": 0, "y": 0}
+
+  - id: web_enhanced.closeSession
+    description: Close a browser session and clean up resources
+    confirm: true
+    args:
+      type: object
+      required: [sessionId]
+      properties:
+        sessionId:
+          type: string
+          description: Session ID to close
+      additionalProperties: false
+    returns:
+      type: object
+      properties:
+        sessionId:
+          type: string
+          description: The closed session ID
+        closed:
+          type: boolean
+          description: Whether session was closed successfully
+    examples:
+      - name: Close work session
+        call: 
+          sessionId: "work-session"
+        expect: 
+          sessionId: "work-session"
+          closed: true

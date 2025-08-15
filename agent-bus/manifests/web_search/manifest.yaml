@@ -1,11 +1,11 @@
-# Web Search adapter (normalized)
+# Zero-Config Web Search adapter for personal agents
 tool_id: web_search
-version: 1.0.0
+version: 2.0.0
 trust_tier: "B"
-description: "Web search functionality via search engines"
+description: "Zero-config web search with multi-engine failover for personal computing agents"
 verbs:
   - id: web_search.search
-    description: Perform a web search and return results
+    description: Zero-config web search with automatic engine failover
     args:
       type: object
       required: [query]
@@ -13,24 +13,18 @@ verbs:
         query:
           type: string
           description: Search query
-        engine:
-          type: string
-          enum: ["google", "bing", "duckduckgo"]
-          default: "google"
-          description: Search engine to use
         limit:
           type: integer
           minimum: 1
           maximum: 20
-          default: 5
+          default: 10
           description: Maximum number of results to return
-        region:
-          type: string
-          description: Region/language for results (e.g., 'us', 'uk', 'fr')
-        safeSearch:
-          type: boolean
-          default: true
-          description: Whether to enable safe search filtering
+        engines:
+          type: array
+          items:
+            type: string
+            enum: ["duckduckgo", "startpage", "brave", "searx"]
+          description: Specific engines to try (optional, uses all engines with priority order if not specified)
       additionalProperties: false
     returns:
       type: object
@@ -55,24 +49,92 @@ verbs:
                 description: Short description/snippet
               source:
                 type: string
-                description: Source domain
-              date:
+                description: Source domain (extracted from URL)
+        engines:
+          type: array
+          items:
+            type: object
+            properties:
+              name:
                 type: string
-                format: date
-                description: Published date if available
+                description: Engine name that provided results
+              results:
+                type: integer
+                description: Number of results from this engine
+              fromCache:
+                type: boolean
+                description: Whether results came from cache
+          description: Information about engines that provided results
+        total:
+          type: integer
+          description: Total number of results returned
         searchUrl:
           type: string
           format: uri
           description: URL of the search results page
     examples:
-      - name: Search for information
-        call: { query: "latest AI research papers", limit: 3 }
+      - name: Zero-config search with automatic failover
+        call: { query: "playwright web automation", limit: 5 }
         expect:
-          query: "latest AI research papers"
+          query: "playwright web automation"
           results:
-            - title: "Recent Advances in AI - Stanford University"
-              url: "https://stanford.edu/ai/research"
-              snippet: "Explore the latest research in artificial intelligence from Stanford's leading researchers..."
-              source: "stanford.edu"
-          searchUrl: "https://www.google.com/search?q=latest+AI+research+papers"
+            - title: "Playwright: Fast and reliable end-to-end testing"
+              url: "https://playwright.dev/"
+              snippet: "Playwright is a framework for Web Testing and Automation..."
+              source: "playwright.dev"
+          engines:
+            - name: "DuckDuckGo"
+              results: 10
+              fromCache: false
+          total: 5
+          searchUrl: "https://duckduckgo.com/?q=playwright+web+automation"
+      
+      - name: Search with specific engines
+        call: { query: "nodejs tutorial", engines: ["duckduckgo", "startpage"], limit: 3 }
+        expect:
+          query: "nodejs tutorial"
+          results:
+            - title: "Node.js Tutorial - W3Schools"
+              url: "https://www.w3schools.com/nodejs/"
+              snippet: "Node.js is a JavaScript runtime built on Chrome's V8..."
+              source: "w3schools.com"
+
+  - id: web_search.suggest
+    description: Get search query suggestions for autocomplete
+    args:
+      type: object
+      required: [query]
+      properties:
+        query:
+          type: string
+          description: Partial search query to get suggestions for
+        limit:
+          type: integer
+          minimum: 1
+          maximum: 10
+          default: 5
+          description: Maximum number of suggestions to return
+      additionalProperties: false
+    returns:
+      type: object
+      properties:
+        query:
+          type: string
+          description: The original query
+        suggestions:
+          type: array
+          items:
+            type: string
+          description: List of suggested completions
+    examples:
+      - name: Get search suggestions
+        call: { query: "javascript", limit: 5 }
+        expect:
+          query: "javascript"
+          suggestions:
+            - "javascript tutorial"
+            - "javascript framework"
+            - "javascript examples"
+            - "what is javascript"
+            - "javascript vs"
 
