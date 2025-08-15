@@ -1,0 +1,256 @@
+# Zero-config cross-platform email adapter
+tool_id: email
+version: 1.0.0
+trust_tier: "A"
+description: "Zero-config email automation for Gmail, Outlook, and other web-based providers. Works cross-platform without API keys."
+
+verbs:
+  - id: email.setup
+    description: Set up email session for web-based email providers (one-time setup)
+    args:
+      type: object
+      required: [email]
+      properties:
+        email:
+          type: string
+          format: email
+          description: Your email address (used to detect provider)
+        provider:
+          type: string
+          enum: ["gmail", "outlook"]
+          description: Email provider (auto-detected if not specified)
+      additionalProperties: false
+    returns:
+      type: object
+      properties:
+        sessionId:
+          type: string
+          description: Session ID for subsequent operations
+        provider:
+          type: string
+          description: Detected or specified email provider
+        setupInstructions:
+          type: array
+          items:
+            type: string
+          description: Step-by-step setup instructions
+    examples:
+      - name: Setup Gmail session
+        call: { email: "user@gmail.com" }
+        expect:
+          sessionId: "abc123def456"
+          provider: "gmail"
+          setupInstructions:
+            - "Run: node /tmp/email_auth_abc123def456.js"
+            - "Login manually in the browser window"
+            - "Press Enter in the terminal once logged in"
+
+  - id: email.send
+    description: Send an email using web-based automation (zero-config)
+    confirm: true
+    args:
+      type: object
+      required: [sessionId, to, subject, body]
+      properties:
+        sessionId:
+          type: string
+          description: Session ID from email.setup
+        to:
+          type: array
+          items:
+            type: string
+            format: email
+          minItems: 1
+          description: Recipient email addresses
+        cc:
+          type: array
+          items:
+            type: string
+            format: email
+          description: CC email addresses
+        bcc:
+          type: array
+          items:
+            type: string
+            format: email
+          description: BCC email addresses
+        subject:
+          type: string
+          description: Email subject line
+        body:
+          type: string
+          description: Email body (plain text or HTML)
+        provider:
+          type: string
+          enum: ["gmail", "outlook"]
+          description: Override provider detection
+      additionalProperties: false
+    returns:
+      type: object
+      properties:
+        success:
+          type: boolean
+          description: Whether email was sent successfully
+        action:
+          type: string
+          description: Action performed
+    examples:
+      - name: Send email via Gmail
+        call:
+          sessionId: "abc123def456"
+          to: ["recipient@example.com"]
+          subject: "Hello from Agent Bus"
+          body: "This email was sent using zero-config web automation!"
+        expect:
+          success: true
+          action: "send"
+
+  - id: email.search
+    description: Search emails using web-based automation (zero-config)
+    args:
+      type: object
+      required: [sessionId]
+      properties:
+        sessionId:
+          type: string
+          description: Session ID from email.setup
+        query:
+          type: string
+          description: Search query (provider-specific syntax)
+        limit:
+          type: integer
+          minimum: 1
+          maximum: 50
+          default: 10
+          description: Maximum number of results
+        unreadOnly:
+          type: boolean
+          default: false
+          description: Only return unread emails
+        provider:
+          type: string
+          enum: ["gmail", "outlook"]
+          description: Override provider detection
+      additionalProperties: false
+    returns:
+      type: object
+      properties:
+        messages:
+          type: array
+          items:
+            type: object
+            properties:
+              id:
+                type: string
+                description: Message ID
+              from:
+                type: string
+                description: Sender email address
+              subject:
+                type: string
+                description: Email subject
+              date:
+                type: string
+                description: Email date/time
+              unread:
+                type: boolean
+                description: Whether email is unread
+              snippet:
+                type: string
+                description: Email preview/snippet
+        total:
+          type: integer
+          description: Total number of results found
+    examples:
+      - name: Search for unread emails
+        call:
+          sessionId: "abc123def456"
+          unreadOnly: true
+          limit: 5
+        expect:
+          messages:
+            - id: "email_0"
+              from: "sender@example.com"
+              subject: "Important Update"
+              date: "Dec 15"
+              unread: true
+              snippet: "Here's the information you requested..."
+          total: 3
+
+  - id: email.list
+    description: List recent emails from inbox (zero-config)
+    args:
+      type: object
+      required: [sessionId]
+      properties:
+        sessionId:
+          type: string
+          description: Session ID from email.setup
+        limit:
+          type: integer
+          minimum: 1
+          maximum: 50
+          default: 10
+          description: Maximum number of emails to return
+        unreadOnly:
+          type: boolean
+          default: false
+          description: Only return unread emails
+        mailbox:
+          type: string
+          default: "INBOX"
+          description: Mailbox to list from
+        provider:
+          type: string
+          enum: ["gmail", "outlook"]
+          description: Override provider detection
+      additionalProperties: false
+    returns:
+      type: object
+      properties:
+        messages:
+          type: array
+          items:
+            type: object
+            properties:
+              id:
+                type: string
+                description: Message ID
+              from:
+                type: string
+                description: Sender email address
+              to:
+                type: array
+                items:
+                  type: string
+                description: Recipient email addresses
+              subject:
+                type: string
+                description: Email subject
+              date:
+                type: string
+                description: Email date/time
+              unread:
+                type: boolean
+                description: Whether email is unread
+              snippet:
+                type: string
+                description: Email preview/snippet
+        total:
+          type: integer
+          description: Number of emails returned
+    examples:
+      - name: List recent emails
+        call:
+          sessionId: "abc123def456"
+          limit: 5
+        expect:
+          messages:
+            - id: "email_0"
+              from: "colleague@company.com"
+              to: ["me@gmail.com"]
+              subject: "Weekly Report"
+              date: "Dec 15"
+              unread: false
+              snippet: "Here's this week's summary..."
+          total: 5

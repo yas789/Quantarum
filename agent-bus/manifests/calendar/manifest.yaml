@@ -1,102 +1,237 @@
-# Generic Calendar adapter wrapper
-# Trust Tier: C (Proxies to local Calendar.app via AppleScript)
+# Zero-config cross-platform calendar adapter
 tool_id: calendar
 version: 1.0.0
-trust_tier: "C"
-description: "Generic calendar verbs (create/invite), locally backed by Calendar.app"
+trust_tier: "A"
+description: "Zero-config calendar automation for Google Calendar, Outlook Calendar, and other web-based providers. Works cross-platform without API keys."
+
 verbs:
-  - id: calendar.create
-    description: Create a new calendar event
-    confirm: true
+  - id: calendar.setup
+    description: Set up calendar session for web-based calendar providers (one-time setup)
     args:
       type: object
-      required: [title, start]
       properties:
-        title:
+        email:
           type: string
-          description: Title of the event
-        start:
+          format: email
+          description: Your email address (used to detect provider)
+        provider:
           type: string
-          format: date-time
-          description: Start time (ISO 8601)
-        end:
-          type: string
-          format: date-time
-          description: End time (ISO 8601). Defaults to +1 hour.
-        allDay:
-          type: boolean
-          default: false
-          description: Whether this is an all-day event
-        location:
-          type: string
-          description: Location of the event
-        notes:
-          type: string
-          description: Additional notes for the event
-        attendees:
-          type: array
-          items:
-            type: string
-            format: email
-          description: Email addresses of attendees
-        calendar:
-          type: string
-          default: "Home"
-          description: Target calendar name
+          enum: ["google", "outlook"]
+          description: Calendar provider (auto-detected if not specified)
       additionalProperties: false
     returns:
       type: object
       properties:
-        eventId:
+        sessionId:
           type: string
-        start:
+          description: Session ID for subsequent operations
+        provider:
           type: string
-          format: date-time
-        end:
-          type: string
-          format: date-time
-    examples:
-      - name: Create dinner
-        call:
-          title: "Dinner at Casa"
-          start: "2025-08-12T19:00:00-07:00"
-          end: "2025-08-12T20:30:00-07:00"
-          location: "Casa" 
-          attendees: ["a@example.com"]
-        expect:
-          eventId: "evt_123"
-
-  - id: calendar.invite
-    description: Add attendees to an existing event and send invites
-    confirm: true
-    args:
-      type: object
-      required: [eventId, attendees]
-      properties:
-        eventId:
-          type: string
-          description: Identifier returned by calendar.create
-        attendees:
+          description: Detected or specified calendar provider
+        setupInstructions:
           type: array
           items:
             type: string
-            format: email
-          minItems: 1
-          description: Email addresses to invite
+          description: Step-by-step setup instructions
+    examples:
+      - name: Setup Google Calendar session
+        call: { email: "user@gmail.com" }
+        expect:
+          sessionId: "cal_abc123def456"
+          provider: "google"
+          setupInstructions:
+            - "Zero-config calendar adapter using web automation"
+            - "1. Open https://calendar.google.com in your browser"
+
+  - id: calendar.create
+    description: Create a calendar event using web-based automation (zero-config)
+    confirm: true
+    args:
+      type: object
+      required: [sessionId, title, start]
+      properties:
+        sessionId:
+          type: string
+          description: Session ID from calendar.setup
+        title:
+          type: string
+          description: Event title/summary
+        start:
+          type: string
+          format: date-time
+          description: Event start date/time (ISO 8601 format)
+        end:
+          type: string
+          format: date-time
+          description: Event end date/time (defaults to 1 hour after start)
+        location:
+          type: string
+          description: Event location
+        notes:
+          type: string
+          description: Event description/notes
+        calendar:
+          type: string
+          default: "primary"
+          description: Calendar to create event in
+        provider:
+          type: string
+          enum: ["google", "outlook"]
+          description: Override provider detection
       additionalProperties: false
     returns:
       type: object
       properties:
         success:
           type: boolean
-        added:
-          type: integer
+          description: Whether event was created successfully
+        title:
+          type: string
+          description: Event title
+        eventId:
+          type: string
+          description: Unique event identifier
+        start:
+          type: string
+          format: date-time
+          description: Event start time (ISO format)
+        end:
+          type: string
+          format: date-time
+          description: Event end time (ISO format)
+        formattedStart:
+          type: string
+          description: Human-readable start time
     examples:
-      - name: Invite two guests
+      - name: Create a meeting
         call:
-          eventId: "evt_123"
-          attendees: ["guest1@example.com", "guest2@example.com"]
+          sessionId: "cal_abc123def456"
+          title: "Team Meeting"
+          start: "2024-12-16T10:00:00Z"
+          location: "Conference Room A"
         expect:
           success: true
-          added: 2
+          title: "Team Meeting"
+          eventId: "evt_1734343200000"
 
+  - id: calendar.list
+    description: List upcoming calendar events (zero-config)
+    args:
+      type: object
+      required: [sessionId]
+      properties:
+        sessionId:
+          type: string
+          description: Session ID from calendar.setup
+        limit:
+          type: integer
+          minimum: 1
+          maximum: 50
+          default: 10
+          description: Maximum number of events to return
+        calendar:
+          type: string
+          default: "primary"
+          description: Calendar to list events from
+        provider:
+          type: string
+          enum: ["google", "outlook"]
+          description: Override provider detection
+      additionalProperties: false
+    returns:
+      type: object
+      properties:
+        events:
+          type: array
+          items:
+            type: object
+            properties:
+              id:
+                type: string
+              title:
+                type: string
+              start:
+                type: string
+                format: date-time
+              end:
+                type: string
+                format: date-time
+              location:
+                type: string
+        total:
+          type: integer
+          description: Number of events returned
+    examples:
+      - name: List upcoming events
+        call:
+          sessionId: "cal_abc123def456"
+          limit: 5
+        expect:
+          events:
+            - id: "evt_001"
+              title: "Team Meeting"
+              start: "2024-12-16T10:00:00Z"
+              end: "2024-12-16T11:00:00Z"
+              location: "Conference Room A"
+          total: 2
+
+  - id: calendar.search
+    description: Search calendar events by title/content (zero-config)
+    args:
+      type: object
+      required: [sessionId]
+      properties:
+        sessionId:
+          type: string
+          description: Session ID from calendar.setup
+        query:
+          type: string
+          description: Search query (searches titles and content)
+        limit:
+          type: integer
+          minimum: 1
+          maximum: 50
+          default: 10
+          description: Maximum number of results
+        provider:
+          type: string
+          enum: ["google", "outlook"]
+          description: Override provider detection
+      additionalProperties: false
+    returns:
+      type: object
+      properties:
+        events:
+          type: array
+          items:
+            type: object
+            properties:
+              id:
+                type: string
+              title:
+                type: string
+              start:
+                type: string
+                format: date-time
+              end:
+                type: string
+                format: date-time
+              location:
+                type: string
+        total:
+          type: integer
+        query:
+          type: string
+    examples:
+      - name: Search for meeting events
+        call:
+          sessionId: "cal_abc123def456"
+          query: "meeting"
+        expect:
+          events:
+            - id: "evt_003"
+              title: "Meeting with Client"
+              start: "2024-12-17T09:00:00Z"
+              end: "2024-12-17T10:00:00Z"
+              location: "Office"
+          total: 1

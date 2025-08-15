@@ -1,9 +1,8 @@
-# Filesystem adapter
-# Trust Tier: A (Direct API calls with no side effects to external systems)
+# Intelligent File System adapter for personal agents
 tool_id: fs
-version: 1.0.0
+version: 2.0.0
 trust_tier: "A"
-description: "Local filesystem operations"
+description: "Zero-config intelligent file system operations with smart organization, content search, and project analysis"
 verbs:
   - id: fs.read
     description: Read the contents of a file
@@ -174,3 +173,317 @@ verbs:
               size: 12345
               mtime: "2023-01-01T12:00:00.000Z"
               isDirectory: false
+
+  # Advanced intelligent operations (new)
+  - id: fs.searchContent
+    description: Search for text content inside files (zero-config full-text search)
+    args:
+      type: object
+      required: [dir, query]
+      properties:
+        dir:
+          type: string
+          description: Directory to search in
+        query:
+          type: string
+          description: Text to search for
+        recursive:
+          type: boolean
+          default: true
+          description: Search recursively in subdirectories
+        caseSensitive:
+          type: boolean
+          default: false
+          description: Case-sensitive search
+        limit:
+          type: integer
+          minimum: 1
+          default: 100
+          description: Maximum number of files to search
+      additionalProperties: false
+    returns:
+      type: object
+      properties:
+        query:
+          type: string
+          description: Original search query
+        files:
+          type: array
+          items:
+            type: object
+            properties:
+              file:
+                type: string
+                description: File path containing matches
+              name:
+                type: string
+                description: File name
+              matches:
+                type: integer
+                description: Number of matches found
+              results:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    line:
+                      type: integer
+                      description: Line number
+                    content:
+                      type: string
+                      description: Matching line content
+                    context:
+                      type: object
+                      properties:
+                        before:
+                          type: string
+                          description: Line before match
+                        after:
+                          type: string
+                          description: Line after match
+        total:
+          type: integer
+          description: Total number of files with matches
+        searched:
+          type: integer
+          description: Total number of files searched
+    examples:
+      - name: Search for TODO comments
+        call: { dir: "/Users/user/projects", query: "TODO", caseSensitive: false }
+        expect:
+          query: "TODO"
+          files:
+            - file: "/Users/user/projects/app.js"
+              name: "app.js"
+              matches: 2
+              results:
+                - line: 42
+                  content: "// TODO: Fix this bug"
+                  context:
+                    before: "function processData() {"
+                    after: "  return data;"
+          total: 1
+          searched: 50
+
+  - id: fs.organize
+    description: Smart file organization analysis by type, date, and size
+    args:
+      type: object
+      required: [dir]
+      properties:
+        dir:
+          type: string
+          description: Directory to analyze for organization
+        generatePlan:
+          type: boolean
+          default: true
+          description: Generate organization plan with suggested actions
+      additionalProperties: false
+    returns:
+      type: object
+      properties:
+        byType:
+          type: object
+          description: Files grouped by type (documents, images, code, etc.)
+        byDate:
+          type: object  
+          description: Files grouped by year-month
+        bySize:
+          type: object
+          properties:
+            small:
+              type: array
+              items:
+                type: string
+              description: Files under 1MB
+            medium:
+              type: array
+              items:
+                type: string
+              description: Files 1MB-100MB
+            large:
+              type: array
+              items:
+                type: string
+              description: Files over 100MB
+        total:
+          type: integer
+          description: Total number of files analyzed
+        plan:
+          type: array
+          items:
+            type: object
+            properties:
+              action:
+                type: string
+                description: Suggested action
+              folder:
+                type: string
+                description: Target folder
+              files:
+                type: integer
+                description: Number of files affected
+              description:
+                type: string
+                description: Action description
+    examples:
+      - name: Analyze Downloads folder
+        call: { dir: "/Users/user/Downloads", generatePlan: true }
+        expect:
+          byType:
+            images: ["photo1.jpg", "screenshot.png"]
+            documents: ["report.pdf", "notes.txt"]
+          total: 5
+
+  - id: fs.duplicates
+    description: Zero-config duplicate file detection with smart hashing
+    args:
+      type: object
+      required: [dir]
+      properties:
+        dir:
+          type: string
+          description: Directory to scan for duplicates
+      additionalProperties: false
+    returns:
+      type: object
+      properties:
+        duplicates:
+          type: array
+          items:
+            type: object
+            properties:
+              files:
+                type: array
+                items:
+                  type: string
+                description: Paths of duplicate files
+              hash:
+                type: string
+                description: Content hash of the files
+              size:
+                type: integer
+                description: Size of each duplicate file
+        total:
+          type: integer
+          description: Number of duplicate groups found
+        wastedSpace:
+          type: integer
+          description: Total bytes wasted by duplicates
+        scanned:
+          type: integer
+          description: Total files scanned
+    examples:
+      - name: Find duplicate photos
+        call: { dir: "/Users/user/Photos" }
+        expect:
+          duplicates:
+            - files: ["/Users/user/Photos/IMG_001.jpg", "/Users/user/Photos/Copy of IMG_001.jpg"]
+              hash: "a1b2c3d4e5f6..."
+              size: 2048576
+          total: 1
+          wastedSpace: 2048576
+
+  - id: fs.analyze
+    description: Intelligent project structure analysis with suggestions
+    args:
+      type: object
+      required: [dir]
+      properties:
+        dir:
+          type: string
+          description: Directory to analyze
+      additionalProperties: false
+    returns:
+      type: object
+      properties:
+        type:
+          type: string
+          description: Detected project type (Node.js, Python, Git Repository, etc.)
+        confidence:
+          type: number
+          minimum: 0
+          maximum: 1
+          description: Confidence score for project type detection
+        files:
+          type: integer
+          description: Total number of files
+        directories:
+          type: integer
+          description: Total number of directories
+        indicators:
+          type: object
+          description: Project type indicators found
+        suggestions:
+          type: array
+          items:
+            type: string
+          description: Suggestions for improving project structure
+    examples:
+      - name: Analyze project directory
+        call: { dir: "/Users/user/my-app" }
+        expect:
+          type: "Node.js"
+          confidence: 0.8
+          files: 42
+          directories: 8
+          suggestions:
+            - "Consider adding a README.md file"
+
+  - id: fs.stats
+    description: Comprehensive directory statistics and insights
+    args:
+      type: object
+      required: [dir]
+      properties:
+        dir:
+          type: string
+          description: Directory to analyze
+      additionalProperties: false
+    returns:
+      type: object
+      properties:
+        total:
+          type: integer
+          description: Total number of files
+        byType:
+          type: object
+          description: File count and size by type
+        totalSize:
+          type: integer
+          description: Total size of all files in bytes
+        largest:
+          type: array
+          items:
+            type: object
+            properties:
+              path:
+                type: string
+              name:
+                type: string
+              size:
+                type: integer
+              type:
+                type: string
+          description: 10 largest files
+        newest:
+          type: array
+          items:
+            type: object
+            properties:
+              path:
+                type: string
+              name:
+                type: string
+              mtime:
+                type: string
+                format: date-time
+              type:
+                type: string
+          description: 10 newest files
+    examples:
+      - name: Get project statistics
+        call: { dir: "/Users/user/projects" }
+        expect:
+          total: 1250
+          totalSize: 52428800

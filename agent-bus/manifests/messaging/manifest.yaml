@@ -1,0 +1,337 @@
+# Zero-config cross-platform messaging adapter
+tool_id: messaging
+version: 1.0.0
+trust_tier: "A"
+description: "Zero-config messaging automation for WhatsApp Web, Slack, Discord, and other web-based messaging platforms. Works cross-platform without API keys."
+
+verbs:
+  - id: messaging.setup
+    description: Set up messaging session for web-based messaging platforms (one-time setup)
+    args:
+      type: object
+      properties:
+        platform:
+          type: string
+          enum: ["whatsapp", "slack", "discord"]
+          description: Messaging platform
+        service:
+          type: string
+          description: Service name (used to detect platform if not specified)
+      additionalProperties: false
+    returns:
+      type: object
+      properties:
+        sessionId:
+          type: string
+          description: Session ID for subsequent operations
+        platform:
+          type: string
+          description: Detected or specified messaging platform
+        setupInstructions:
+          type: array
+          items:
+            type: string
+          description: Step-by-step setup instructions
+    examples:
+      - name: Setup WhatsApp Web session
+        call: { platform: "whatsapp" }
+        expect:
+          sessionId: "msg_abc123def456"
+          platform: "whatsapp"
+          setupInstructions:
+            - "Run: node /tmp/messaging_auth_abc123def456.js"
+            - "Follow the platform-specific login instructions"
+
+  - id: messaging.send
+    description: Send a message using web-based automation (zero-config)
+    confirm: true
+    args:
+      type: object
+      required: [sessionId, to, message]
+      properties:
+        sessionId:
+          type: string
+          description: Session ID from messaging.setup
+        to:
+          type: string
+          description: Recipient (contact name, phone number, channel, or username)
+        message:
+          type: string
+          description: Message text to send
+        platform:
+          type: string
+          enum: ["whatsapp", "slack", "discord"]
+          description: Override platform detection
+        attachments:
+          type: array
+          items:
+            type: string
+          description: File paths for attachments (if supported)
+      additionalProperties: false
+    returns:
+      type: object
+      properties:
+        success:
+          type: boolean
+          description: Whether message was sent successfully
+        action:
+          type: string
+          description: Action performed
+        recipient:
+          type: string
+          description: Message recipient
+        message:
+          type: string
+          description: Message that was sent
+        platform:
+          type: string
+          description: Platform used
+        timestamp:
+          type: string
+          format: date-time
+          description: When message was sent
+        messageId:
+          type: string
+          description: Unique message identifier
+    examples:
+      - name: Send WhatsApp message
+        call:
+          sessionId: "msg_abc123def456"
+          to: "John Doe"
+          message: "Hello from Agent Bus! 👋"
+        expect:
+          success: true
+          action: "send"
+          recipient: "John Doe"
+          message: "Hello from Agent Bus! 👋"
+          platform: "whatsapp"
+
+  - id: messaging.list
+    description: List recent chats/channels (zero-config)
+    args:
+      type: object
+      required: [sessionId]
+      properties:
+        sessionId:
+          type: string
+          description: Session ID from messaging.setup
+        limit:
+          type: integer
+          minimum: 1
+          maximum: 50
+          default: 10
+          description: Maximum number of chats to return
+        unreadOnly:
+          type: boolean
+          default: false
+          description: Only return chats with unread messages
+        platform:
+          type: string
+          enum: ["whatsapp", "slack", "discord"]
+          description: Override platform detection
+      additionalProperties: false
+    returns:
+      type: object
+      properties:
+        chats:
+          type: array
+          items:
+            type: object
+            properties:
+              id:
+                type: string
+                description: Chat/channel ID
+              name:
+                type: string
+                description: Chat/channel name
+              lastMessage:
+                type: string
+                description: Preview of last message
+              platform:
+                type: string
+                description: Messaging platform
+              unread:
+                type: boolean
+                description: Whether chat has unread messages
+              participants:
+                type: integer
+                description: Number of participants (for group chats)
+        total:
+          type: integer
+          description: Number of chats returned
+        platform:
+          type: string
+          description: Platform queried
+    examples:
+      - name: List WhatsApp chats
+        call:
+          sessionId: "msg_abc123def456"
+          limit: 5
+        expect:
+          chats:
+            - id: "chat_001"
+              name: "Family Group"
+              lastMessage: "See you tonight!"
+              platform: "whatsapp"
+              unread: true
+          total: 3
+
+  - id: messaging.read
+    description: Read messages from a specific chat/channel (zero-config)
+    args:
+      type: object
+      required: [sessionId, chat]
+      properties:
+        sessionId:
+          type: string
+          description: Session ID from messaging.setup
+        chat:
+          type: string
+          description: Chat/channel name or ID to read from
+        limit:
+          type: integer
+          minimum: 1
+          maximum: 100
+          default: 20
+          description: Maximum number of messages to return
+        unreadOnly:
+          type: boolean
+          default: false
+          description: Only return unread messages
+        platform:
+          type: string
+          enum: ["whatsapp", "slack", "discord"]
+          description: Override platform detection
+      additionalProperties: false
+    returns:
+      type: object
+      properties:
+        messages:
+          type: array
+          items:
+            type: object
+            properties:
+              id:
+                type: string
+                description: Message ID
+              text:
+                type: string
+                description: Message text content
+              sender:
+                type: string
+                description: Message sender name/username
+              timestamp:
+                type: string
+                format: date-time
+                description: When message was sent
+              platform:
+                type: string
+                description: Messaging platform
+              attachments:
+                type: array
+                items:
+                  type: string
+                description: File attachments (if any)
+        total:
+          type: integer
+          description: Number of messages returned
+        chat:
+          type: string
+          description: Chat/channel that was read
+        platform:
+          type: string
+          description: Platform used
+    examples:
+      - name: Read messages from chat
+        call:
+          sessionId: "msg_abc123def456"
+          chat: "Work Team"
+          limit: 10
+        expect:
+          messages:
+            - id: "msg_001"
+              text: "Hey, how are you?"
+              sender: "Alice"
+              timestamp: "2024-12-15T14:30:00Z"
+              platform: "whatsapp"
+          total: 3
+          chat: "Work Team"
+
+  - id: messaging.search
+    description: Search messages across chats/channels (zero-config)
+    args:
+      type: object
+      required: [sessionId, query]
+      properties:
+        sessionId:
+          type: string
+          description: Session ID from messaging.setup
+        query:
+          type: string
+          description: Search query text
+        limit:
+          type: integer
+          minimum: 1
+          maximum: 50
+          default: 10
+          description: Maximum number of results
+        chat:
+          type: string
+          description: Specific chat/channel to search in (optional)
+        platform:
+          type: string
+          enum: ["whatsapp", "slack", "discord"]
+          description: Override platform detection
+      additionalProperties: false
+    returns:
+      type: object
+      properties:
+        results:
+          type: array
+          items:
+            type: object
+            properties:
+              id:
+                type: string
+                description: Message ID
+              text:
+                type: string
+                description: Message text content
+              chat:
+                type: string
+                description: Chat/channel where message was found
+              sender:
+                type: string
+                description: Message sender
+              timestamp:
+                type: string
+                format: date-time
+                description: When message was sent
+              platform:
+                type: string
+                description: Messaging platform
+        total:
+          type: integer
+          description: Number of matching messages
+        query:
+          type: string
+          description: Search query that was used
+        platform:
+          type: string
+          description: Platform searched
+    examples:
+      - name: Search for messages
+        call:
+          sessionId: "msg_abc123def456"
+          query: "meeting"
+          limit: 5
+        expect:
+          results:
+            - id: "search_001"
+              text: "Found message containing meeting: Don't forget the meeting at 3pm"
+              chat: "Work Team"
+              sender: "Bob"
+              timestamp: "2024-12-15T10:00:00Z"
+              platform: "whatsapp"
+          total: 1
+          query: "meeting"
