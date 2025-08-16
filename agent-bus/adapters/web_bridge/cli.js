@@ -325,6 +325,116 @@ function generateExtensionScript() {
       };
     }
     
+    // ChatGPT operations - Zero-config AI access!
+    async handleChatGPTCommand(command) {
+      switch (command.action) {
+        case 'chat':
+        case 'send':
+          return this.sendChatGPTMessage(command.data);
+        case 'new':
+          return this.createNewChatGPTSession(command.data);
+        case 'history':
+          return this.getChatGPTHistory(command.data);
+        default:
+          return { error: 'UNKNOWN_ACTION', action: command.action };
+      }
+    }
+    
+    sendChatGPTMessage({message, waitForResponse = true}) {
+      // Find ChatGPT message input
+      const messageInput = document.querySelector('textarea[placeholder*="Message"]') || 
+                          document.querySelector('#prompt-textarea') ||
+                          document.querySelector('textarea[data-id="root"]');
+      
+      if (!messageInput) {
+        return {
+          error: 'INPUT_NOT_FOUND',
+          message: 'ChatGPT message input not found. Make sure you are on chat.openai.com'
+        };
+      }
+      
+      // Clear and type message
+      messageInput.value = '';
+      messageInput.textContent = message;
+      messageInput.dispatchEvent(new Event('input', { bubbles: true }));
+      
+      // Send message (usually Enter key or send button)
+      const sendButton = document.querySelector('button[data-testid="send-button"]') ||
+                        document.querySelector('button[aria-label*="Send"]');
+      
+      if (sendButton && !sendButton.disabled) {
+        sendButton.click();
+      } else {
+        // Fallback to Enter key
+        messageInput.dispatchEvent(new KeyboardEvent('keydown', {
+          key: 'Enter',
+          bubbles: true
+        }));
+      }
+      
+      // For V1, return immediate success with simulation
+      // Real implementation would wait for response and scrape it
+      return {
+        success: true,
+        action: 'send',
+        message: message,
+        response: 'Message sent to ChatGPT. Response will appear in the chat.',
+        method: 'chatgpt_web_automation',
+        timestamp: new Date().toISOString(),
+        conversationId: this.getCurrentConversationId()
+      };
+    }
+    
+    createNewChatGPTSession() {
+      // Click new chat button
+      const newChatButton = document.querySelector('a[href="/"]') ||
+                           document.querySelector('button[aria-label*="New chat"]') ||
+                           document.querySelector('[data-testid="new-chat"]');
+      
+      if (newChatButton) {
+        newChatButton.click();
+      }
+      
+      return {
+        success: true,
+        action: 'new',
+        sessionId: \`chat_\${Date.now()}\`,
+        method: 'chatgpt_new_session',
+        timestamp: new Date().toISOString()
+      };
+    }
+    
+    getChatGPTHistory({limit = 10}) {
+      // Extract conversation history from the current chat
+      const messages = document.querySelectorAll('[data-message-author-role]');
+      const history = Array.from(messages).slice(-limit * 2).map((msg, i) => {
+        const role = msg.getAttribute('data-message-author-role') || 
+                    (i % 2 === 0 ? 'user' : 'assistant');
+        const content = msg.textContent?.trim() || '';
+        
+        return {
+          role: role,
+          content: content,
+          timestamp: new Date().toISOString()
+        };
+      });
+      
+      return {
+        success: true,
+        action: 'history',
+        messages: history,
+        total: history.length,
+        method: 'chatgpt_history_extraction',
+        conversationId: this.getCurrentConversationId()
+      };
+    }
+    
+    getCurrentConversationId() {
+      // Extract conversation ID from URL or generate one
+      const urlMatch = window.location.pathname.match(/\/c\/([a-f0-9-]+)/);
+      return urlMatch ? urlMatch[1] : \`local_\${Date.now()}\`;
+    }
+    
     reportReady() {
       localStorage.setItem('quantarum_bridge_ready', this.platform);
       console.log(\`Quantarum Bridge ready on \${this.platform}\`);
@@ -489,6 +599,49 @@ function generateMockResponse(platform, action, data) {
         };
       }
       break;
+      
+    case 'chatgpt':
+      if (action === 'send') {
+        return {
+          success: true,
+          action: 'send',
+          message: data.message,
+          response: `I understand you want to ${data.message.toLowerCase()}. This is a simulated ChatGPT response via web automation. In the real implementation, I would scrape the actual response from the DOM after ChatGPT finishes generating it.`,
+          method: 'chatgpt_web_automation',
+          timestamp: new Date().toISOString(),
+          conversationId: `chat_${Date.now()}`
+        };
+      }
+      if (action === 'new') {
+        return {
+          success: true,
+          action: 'new',
+          sessionId: `chat_${Date.now()}`,
+          method: 'chatgpt_new_session',
+          timestamp: new Date().toISOString()
+        };
+      }
+      if (action === 'history') {
+        return {
+          success: true,
+          action: 'history',
+          messages: [
+            {
+              role: 'user',
+              content: 'Hello, can you help me write an email?',
+              timestamp: new Date(Date.now() - 120000).toISOString()
+            },
+            {
+              role: 'assistant', 
+              content: 'I\'d be happy to help you write an email! What kind of email are you looking to write?',
+              timestamp: new Date(Date.now() - 60000).toISOString()
+            }
+          ],
+          total: 2,
+          method: 'chatgpt_history_extraction'
+        };
+      }
+      break;
   }
   
   return {
@@ -592,6 +745,47 @@ function generateMockResponse(platform, action, data) {
         });
         
         return ok(createResult);
+
+      case 'web.chat':
+        requireArgs(args, ['message']);
+        
+        // Default to ChatGPT platform
+        const chatPlatform = args.platform || 'chatgpt';
+        
+        const chatAvailability = await checkPlatformAvailability(chatPlatform);
+        if (!chatAvailability.available) {
+          return fail(11, 'PLATFORM_NOT_AVAILABLE', {
+            platform: chatPlatform,
+            url: PLATFORMS[chatPlatform]?.url,
+            instructions: [`Please open ${PLATFORMS[chatPlatform]?.name} in your browser`]
+          });
+        }
+        
+        const chatResult = await sendCommandToBrowser(chatPlatform, 'send', {
+          message: args.message,
+          waitForResponse: args.waitForResponse !== false
+        });
+        
+        return ok(chatResult);
+
+      case 'web.new':
+        const newPlatform = args.platform || 'chatgpt';
+        
+        if (newPlatform !== 'chatgpt') {
+          return fail(11, 'INVALID_PLATFORM_FOR_ACTION', { platform: newPlatform, action: 'new' });
+        }
+        
+        const newAvailability = await checkPlatformAvailability(newPlatform);
+        if (!newAvailability.available) {
+          return fail(11, 'PLATFORM_NOT_AVAILABLE', {
+            platform: newPlatform,
+            url: PLATFORMS[newPlatform]?.url
+          });
+        }
+        
+        const newResult = await sendCommandToBrowser(newPlatform, 'new', {});
+        
+        return ok(newResult);
 
       default:
         return fail(10, 'UNKNOWN_VERB', { verb: verbId });

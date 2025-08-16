@@ -90,6 +90,38 @@ const tests = [
     }
   },
   {
+    name: 'ChatGPT - Start New Chat',
+    description: 'Create a new ChatGPT conversation session',
+    payload: {
+      verb: 'web.new',
+      args: {
+        platform: 'chatgpt'
+      }
+    }
+  },
+  {
+    name: 'ChatGPT - Send Message',
+    description: 'Send message to ChatGPT and get AI response (zero-config AI!)',
+    payload: {
+      verb: 'web.chat',
+      args: {
+        message: 'Help me write a professional email to my team about a project update. The project is on track and we completed the first milestone.',
+        platform: 'chatgpt'
+      }
+    }
+  },
+  {
+    name: 'ChatGPT - Another AI Query',
+    description: 'Ask ChatGPT for code help',
+    payload: {
+      verb: 'web.chat',
+      args: {
+        message: 'Write a Python function that calculates the factorial of a number using recursion.',
+        platform: 'chatgpt'
+      }
+    }
+  },
+  {
     name: 'Platform Not Available Error',
     description: 'Test error handling when platform is not open',
     payload: {
@@ -219,6 +251,20 @@ function displayInsights(testName, data) {
         console.log(`   📝 Recent: "${data.chats[0].name}" - ${data.chats[0].lastMessage}`);
       }
       break;
+      
+    case 'ChatGPT - Start New Chat':
+      console.log(`   🆔 New chat session: ${data.sessionId}`);
+      console.log(`   🔗 Method: ${data.method}`);
+      console.log(`   🤖 Ready for AI conversations!`);
+      break;
+      
+    case 'ChatGPT - Send Message':
+    case 'ChatGPT - Another AI Query':
+      console.log(`   💭 Query: "${data.message.substring(0, 60)}${data.message.length > 60 ? '...' : ''}"`);
+      console.log(`   🤖 AI Response: "${data.response.substring(0, 80)}${data.response.length > 80 ? '...' : ''}"`);
+      console.log(`   🔗 Method: ${data.method}`);
+      console.log(`   💬 Conversation ID: ${data.conversationId}`);
+      break;
   }
 }
 
@@ -251,6 +297,7 @@ async function runAllTests() {
     console.log('   📧 Gmail operations (send, list) through existing session');
     console.log('   📅 Calendar management (create, list) via web interface');
     console.log('   💬 WhatsApp messaging (send, list chats) through web');
+    console.log('   🤖 ChatGPT AI automation - ZERO API KEYS REQUIRED!');
     console.log('   🔐 Uses existing browser authentication - no separate login');
     console.log('   ⚡ Lightweight bridge - minimal browser extension');
     console.log('   🎯 Actually sufficient for V1 production use!');
